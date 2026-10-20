@@ -119,6 +119,8 @@ export class MetronomeCard extends HTMLElement {
     this.shadowRoot.addEventListener("click", this.clickHandler ||= event => this.handleClick(event));
     this.shadowRoot.addEventListener("change", this.changeHandler ||= event => this.handleChange(event));
     this.shadowRoot.addEventListener("input", this.inputHandler ||= event => {
+      // Typing previews the value on the arc and tempo marking; Enter/blur commits it.
+      if (event.target.classList.contains("bpm")) return this.update();
       if (event.target.classList.contains("volume")) {
         const v = Number(event.target.value);
         this.$(".volume-wrap").style.setProperty("--volume", `${v}%`);
@@ -126,10 +128,23 @@ export class MetronomeCard extends HTMLElement {
         this.patch({volume: v / 100}, true);
       }
     });
+    this.shadowRoot.addEventListener("focusout", this.blurHandler ||= event => {
+      if (event.target.classList.contains("bpm")) queueMicrotask(() => this.update());
+    });
     this.shadowRoot.addEventListener("focusin", this.focusHandler ||= event => {
       if (event.target.dataset.field != null) { this.selectedField = Number(event.target.dataset.field); this.updateClock(); }
     });
-    this.shadowRoot.addEventListener("keydown", this.keyHandler ||= event => this.menuKey(event));
+    this.shadowRoot.addEventListener("keydown", this.keyHandler ||= event => {
+      const target = event.target;
+      if ((target.classList.contains("bpm") || target.dataset.field != null) && (event.key === "Enter" || event.key === "Escape")) {
+        event.preventDefault();
+        // Escape restores the committed value; blur commits through the change event.
+        if (event.key === "Escape") { target.value = target.defaultValue; }
+        target.blur();
+        return;
+      }
+      this.menuKey(event);
+    });
     this.bindDial(".bpm-dial", false);
     this.bindDial(".timer-dial", true);
   }
@@ -260,6 +275,7 @@ export class MetronomeCard extends HTMLElement {
       if (dragging !== event.pointerId) return;
       if (event.type === "pointerup") move(event);
       dragging = null;
+      this.dragBpm = null;
       dial.classList.remove("dragging");
       if (path.hasPointerCapture?.(event.pointerId)) path.releasePointerCapture(event.pointerId);
       this.flushPatch();
@@ -284,8 +300,23 @@ export class MetronomeCard extends HTMLElement {
   }
   // Not "preview": HA sets a boolean `preview` property on every card element.
   previewBpm(bpm) {
+    this.dragBpm = bpm;
     const input = this.$(".bpm");
     if (input && this.shadowRoot.activeElement !== input) input.value = bpm;
+    if (this.player?.state) this.$(".metadata").textContent = this.meta(this.player.state.settings, bpm);
+  }
+  // The BPM the dial shows: dragged, typed (null while the typed text is not 1-200),
+  // otherwise the committed value.
+  shownBpm(s) {
+    if (this.dragBpm != null) return this.dragBpm;
+    const input = this.$(".bpm");
+    if (!input || this.shadowRoot.activeElement !== input) return s.bpm;
+    const typed = Number(input.value);
+    return input.value !== "" && Number.isInteger(typed) && typed >= 1 && typed <= 200 ? typed : null;
+  }
+  meta(s, bpm = s.bpm) {
+    return ["BPM", ...(this.config.show_signature ? [s.signature] : []),
+      ...(this.config.show_tempo && bpm != null ? [tempo(bpm)] : [])].join(" · ");
   }
   draw(dial, fraction, inverted = false) {
     const start = inverted ? 225 : 135, direction = inverted ? -1 : 1;
@@ -317,18 +348,20 @@ export class MetronomeCard extends HTMLElement {
     this.$(".main .name").textContent = name;
     this.$(".breadcrumb").textContent = name;
     const status = active ? "Active" : state.state === "paused" ? "Paused" : "Idle";
-    const meta = ["BPM", ...(this.config.show_signature ? [s.signature] : []), ...(this.config.show_tempo ? [tempo(s.bpm)] : [])].join(" · ");
+    const meta = this.meta(s);
     if (this.config.layout === "compact") {
       this.$(".meta").textContent = `${status} · ${meta}`;
       this.$(".compact-bpm").textContent = s.bpm;
     } else {
       this.$(".device").textContent = state.is_owner ? "This device" : state.output_ready ? "Another device selected" : "Current device";
       this.$(".status").textContent = status;
-      if (this.shadowRoot.activeElement !== this.$(".bpm") && !this.$(".bpm-dial").classList.contains("dragging")) this.$(".bpm").value = s.bpm;
+      const bpmInput = this.$(".bpm"), shown = this.shownBpm(s);
+      bpmInput.defaultValue = s.bpm;
+      if (this.shadowRoot.activeElement !== bpmInput && this.dragBpm == null) bpmInput.value = s.bpm;
       this.$(".bpm-range").value = s.bpm;
       this.$(".bpm-range").setAttribute("aria-valuetext",`${s.bpm} ${s.signature === "6/8" ? "dotted-quarter" : "quarter-note"} beats per minute`);
-      this.$(".metadata").textContent = meta;
-      if (!this.$(".bpm-dial").classList.contains("dragging")) this.draw(this.$(".bpm-dial"),(s.bpm-1)/199);
+      this.$(".metadata").textContent = this.meta(s, shown);
+      if (this.dragBpm == null) this.draw(this.$(".bpm-dial"),((shown ?? s.bpm)-1)/199);
       const dots = this.$(".dots");
       if (dots.children.length !== METERS[s.signature]) dots.innerHTML = "<span></span>".repeat(METERS[s.signature]);
       this.$(".footer").hidden = !this.config.show_advanced;
@@ -406,7 +439,9 @@ export class MetronomeCard extends HTMLElement {
     const fields = splitTime(locked ? rem : finished ? 0 : s.duration);
     this.all("[data-field]").forEach((input,i) => {
       input.disabled = locked; input.classList.toggle("selected",i === this.selectedField && !locked);
-      if (this.shadowRoot.activeElement !== input || locked) input.value = String(fields[i]).padStart(2,"0");
+      const text = String(fields[i]).padStart(2,"0");
+      input.defaultValue = text;
+      if (this.shadowRoot.activeElement !== input || locked) input.value = text;
     });
     ["time-minus","time-plus"].forEach((key,i) => {
       const b = this.$(`[data-action="${key}"]`);
