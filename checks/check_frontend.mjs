@@ -1,6 +1,6 @@
 // Pure math/format checks. Does not exercise HA, a DOM or a real AudioContext.
 import assert from "node:assert/strict";
-import {METERS, tempo, dialFraction, point, remaining, timeText, escapeHTML} from "../custom_components/metronome/frontend/shared.js";
+import {METERS, tempo, dialFraction, point, remaining, timeText, escapeHTML, hapticMode, HAPTIC_TYPES} from "../custom_components/metronome/frontend/shared.js";
 assert.equal(METERS["6/8"],2);
 for (const [bpm,marking] of [[1,"Larghissimo"],[60,"Larghetto"],[120,"Allegro"],[200,"Prestissimo"]]) assert.equal(tempo(bpm),marking);
 for (const inverted of [false,true]) {
@@ -16,4 +16,12 @@ assert.equal(remaining({state:"playing",ends_at:100,remaining:30,settings:{durat
 // Resumed with 20 s left: the 200 ms start lead must not show as extra time.
 assert.equal(remaining({state:"playing",ends_at:100.2,remaining:20,settings:{duration:30}},80.1),20);
 assert.equal(escapeHTML('<img src="x">'),"&lt;img src=&quot;x&quot;&gt;");
+// Haptics: vibrate wins wherever it exists (Android app + browsers), the Companion
+// haptic event only without it (iOS app), nothing in plain iOS Safari.
+const vib = {vibrate() {}};
+assert.equal(hapticMode(vib, {externalApp: {}}), "vibrate");
+assert.equal(hapticMode({}, {webkit: {messageHandlers: {externalBus: {}}}}), "companion");
+assert.equal(hapticMode({}, {externalApp: {}}), "companion");
+assert.equal(hapticMode({}, {webkit: {}}), null);
+assert.deepEqual([20, 40, 70].map(ms => HAPTIC_TYPES[ms]), ["light", "medium", "heavy"]);
 console.log("Frontend helper checks passed");

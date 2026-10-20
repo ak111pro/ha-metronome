@@ -1,7 +1,7 @@
 import {getPlayer} from "./player.js";
 import {styles} from "./styles.js";
 import {DEFAULT_CONFIG, METERS, escapeHTML as esc, clamp, tempo, remaining, splitTime,
-  timeText, arc, point, dialFraction, beatPosition} from "./shared.js";
+  timeText, arc, point, dialFraction, beatPosition, hapticMode} from "./shared.js";
 
 const icon = name => `<ha-icon icon="mdi:${name}" aria-hidden="true"></ha-icon>`;
 const button = (action, label, glyph, cls = "control") =>
@@ -118,7 +118,7 @@ export class MetronomeCard extends HTMLElement {
         <header class="subheader">${button("back","Back to metronome","chevron-left","back")}<div><div class="breadcrumb"></div><div class="name">Advanced</div></div></header>
         <div class="settings"><div class="settings-label">Rhythm</div><div class="grid">${picker("signature")}${picker("count_in")}</div><div class="note meter-note"></div>${tile("accent","Accent first beat","waveform")}
           <div class="settings-label">Sound</div><label class="volume-label" for="volume"><span>Volume</span><output></output></label><div class="volume-wrap"><div class="volume-fill" aria-hidden="true"><span class="volume-marker"></span></div><input id="volume" class="volume" type="range" min="0" max="100" step="1" aria-label="Volume"></div>${tile("muted","Mute","volume-off")}
-          <div class="haptics"><div class="settings-label">Haptics</div><div class="grid">${tile("vibration","Vibration","vibrate")}${picker("pulse")}</div><div class="note">On compatible devices</div></div>
+          <div class="haptics"><div class="settings-label">Haptics</div><div class="grid">${tile("vibration","Vibration","vibrate")}${picker("pulse")}</div><div class="note haptics-note"></div></div>
         </div>
       </section><div class="message" role="status" hidden></div>
       </ha-card>`;
@@ -397,7 +397,11 @@ export class MetronomeCard extends HTMLElement {
       const key = el.dataset.toggle, value = key === "vibration" ? this.player.vibration : s[key];
       el.setAttribute("aria-pressed",String(value)); el.querySelector("small").textContent = value ? "On" : "Off";
     });
-    this.$(".haptics").hidden = typeof navigator.vibrate !== "function";
+    const haptics = hapticMode();
+    this.$(".haptics").hidden = !haptics;
+    this.$(".haptics-note").textContent = haptics === "companion"
+      ? "Uses the app's light, medium or heavy haptic. Silent or mute mode can turn it off."
+      : "Silent or mute mode on the phone can turn vibration off.";
     const volume = Math.round(s.volume*100);
     if (this.shadowRoot.activeElement !== this.$(".volume")) this.$(".volume").value = volume;
     this.$(".volume-wrap").style.setProperty("--volume", `${volume}%`);

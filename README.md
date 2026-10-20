@@ -13,7 +13,7 @@ This repository contains the integration, the card, installation examples, an HA
 - Tempo 1–200 BPM, ±1 buttons, tap tempo, tempo markings, beat dots and optional diffuse glow.
 - 2/4, 3/4, 4/4 and 6/8. In 6/8, BPM counts **two dotted-quarter beats per bar**. Subdivisions are not part of this version.
 - Optional countdown, 5–120-second dial, separate hours/minutes/seconds fields up to 99:59:59, pause/resume, actual expected finish time, count-in and completion sound.
-- Volume, mute, accent and capability-dependent vibration. Haptic pulse length is available; vibration intensity is not exposed.
+- Volume, mute, accent and capability-dependent vibration. Haptic pulse length is available; vibration intensity is not exposed. See [Haptics](#haptics).
 - Web Audio scheduling on the selected foreground device. The Pi manages state and settings; it does not synthesize or stream the beats.
 
 ## Install for testing
@@ -75,6 +75,16 @@ Pause is available only when the timer is enabled. It preserves the remaining ti
 Visibility settings hide controls; they do not change the shared session. A hidden timer can still be enabled by another card or automation. Tempo, duration, count-in, meter, accent, volume and mute belong to the integration instance, not the card configuration. Vibration preferences are local to the current page and reset on reload.
 
 The card uses `ha-card`, `ha-icon`, HA theme tokens, 48px primary controls and semantic keyboard-accessible inputs. Its thermostat-like dials, menus and expanded dialog are custom controls. It is visually aligned with HA; it is **not an upstream HA card or a guarantee that every control is HA's own internal component**. Native-theme and accessibility checks remain part of the handoff.
+
+## Haptics
+
+Vibration is off by default and is a local, per-page setting (Advanced → Haptics).
+
+- **Android app and Android browsers:** `navigator.vibrate` with the exact pulse lengths Short/Medium/Long = 20/40/70 ms.
+- **iOS Companion app** (no `navigator.vibrate` in WebKit): the card sends Home Assistant's own frontend `haptic` event, which HA forwards to the app. Short/Medium/Long map to the app's `light`/`medium`/`heavy` haptics; the app decides their strength.
+- **Other browsers without vibration** (e.g. Safari on iOS): the Haptics section is hidden.
+
+A phone in silent/mute/vibrate-off sound mode (for example Samsung's "Mute" mode) can suppress app vibration entirely; the card says so under Haptics. There is no intensity control.
 
 ## Entities and automations
 

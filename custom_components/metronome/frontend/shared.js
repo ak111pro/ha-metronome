@@ -37,3 +37,13 @@ export function dialFraction(x, y, inverted = false) {
   const delta = ((inverted ? 225 - a : a - 135) % 360 + 360) % 360;
   return delta <= 270 ? delta / 270 : delta < 315 ? 1 : 0;
 }
+/* Haptics: navigator.vibrate where the browser/WebView has it (Android app and browsers;
+ * exact 20/40/70 ms pulses). Otherwise, inside the HA Companion app (iOS has no
+ * navigator.vibrate), HA's own "haptic" event, which the frontend forwards to the app.
+ * The app picks the strength for light/medium/heavy; there is no intensity control. */
+export const HAPTIC_TYPES = {20: "light", 40: "medium", 70: "heavy"};
+export function hapticMode(nav = globalThis.navigator, win = globalThis.window) {
+  if (typeof nav?.vibrate === "function") return "vibrate";
+  if (win?.externalApp || win?.webkit?.messageHandlers?.externalBus) return "companion";
+  return null;
+}

@@ -1,7 +1,7 @@
 /* A single engine per HA connection/entity, independent of card attachment.
  * No audio is generated on the HA host. WS sends session changes, never beats.
  */
-import {METERS, beatPosition} from "./shared.js";
+import {METERS, HAPTIC_TYPES, beatPosition, hapticMode} from "./shared.js";
 
 const REGISTRY = Symbol.for("metronome.players.v1");
 globalThis[REGISTRY] ||= new WeakMap();
@@ -179,7 +179,7 @@ class Player extends EventTarget {
       try { node.stop(); } catch (_) { /* already ended */ }
       this.nodes.delete(node);
     }
-    if (this.vibration && navigator.vibrate) navigator.vibrate(0);
+    if (this.vibration && hapticMode() === "vibrate") navigator.vibrate(0);
   }
 
   interrupt(error) {
@@ -236,7 +236,7 @@ class Player extends EventTarget {
         const timeout = setTimeout(() => {
           this.visuals.delete(timeout);
           this.emit("beat", {beat, countIn});
-          if (this.vibration && navigator.vibrate && !document.hidden) navigator.vibrate(this.pulse);
+          if (this.vibration && !document.hidden) this.buzz();
         }, Math.max(0, when - this.audio.currentTime) * 1000);
         this.visuals.add(timeout);
         index++;
@@ -245,6 +245,13 @@ class Player extends EventTarget {
     };
     this.loop = setInterval(tick, 25);
     tick();
+  }
+
+  buzz() {
+    const mode = hapticMode();
+    if (mode === "vibrate") navigator.vibrate(this.pulse);
+    // HA's frontend listens for this on window and passes it to the Companion app.
+    else if (mode === "companion") window.dispatchEvent(new CustomEvent("haptic", {detail: HAPTIC_TYPES[this.pulse] || "light"}));
   }
 
   finished() {
