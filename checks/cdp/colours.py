@@ -46,7 +46,9 @@ async def card_shot(cdp, expr, path):
         " return {x: r.left, y: r.top + window.scrollY, w: r.width, h: r.height}; })()"
     )
     clip = {"x": rect["x"], "y": rect["y"], "width": rect["w"], "height": rect["h"], "scale": 1}
-    r = await cdp.call("Page.captureScreenshot", format="png", clip=clip, captureBeyondViewport=True)
+    r = await cdp.call(
+        "Page.captureScreenshot", format="png", clip=clip, captureBeyondViewport=True
+    )
     with open(path, "wb") as f:
         f.write(base64.b64decode(r["data"]))
 
@@ -58,7 +60,9 @@ async def main():
         cdp = await open_page(session, 1000, 2400)
         for theme in ("light", "dark"):
             await login(cdp, theme=theme, wait=15)
-            await cdp.js(f"{CUSTOM}.player.action('configure', {{timer_enabled: true, duration: 45}})")
+            await cdp.js(
+                f"{CUSTOM}.player.action('configure', {{timer_enabled: true, duration: 45}})"
+            )
             await cdp.idle(1.5)
             custom = await cdp.js(f"{MEASURE}({CUSTOM})")
             default = await cdp.js(f"{MEASURE}({DEFAULT})")

@@ -7,3 +7,7 @@ select = ["E", "F", "W", "I", "UP", "B", "SIM"]
 [lint.isort]
 force-sort-within-sections = true
 known-first-party = ["homeassistant", "custom_components"]
+
+[lint.per-file-ignores]
+# Browser checks embed JavaScript in Python strings, which the formatter cannot wrap.
+"checks/cdp/*.py" = ["E501"]
