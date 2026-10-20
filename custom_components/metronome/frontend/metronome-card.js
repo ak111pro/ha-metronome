@@ -37,7 +37,7 @@ export class MetronomeCard extends HTMLElement {
     this.taps = [];
     this.motion = window.matchMedia("(prefers-reduced-motion: reduce)");
     this.onChange = () => this.update();
-    this.onBeat = event => this.pulse(event.detail.beat);
+    this.onBeat = event => this.pulse(event.detail.beat, event.detail.countIn);
   }
   setConfig(config) {
     if (!config.entity?.startsWith("media_player.")) throw new Error("Select a Metronome media_player entity");
@@ -346,6 +346,7 @@ export class MetronomeCard extends HTMLElement {
     const s = state.settings, active = state.state === "playing", locked = state.state !== "idle";
     const card = this.$("ha-card");
     card.classList.toggle("active",active); card.classList.toggle("idle",!active);
+    if (!active) card.classList.remove("count-in");
     card.classList.toggle("feedback-off",this.config.feedback === "off");
     this.$(".main").hidden = this.advanced;
     this.$(".advanced-view").hidden = !this.advanced;
@@ -428,7 +429,7 @@ export class MetronomeCard extends HTMLElement {
     const finished = state.state === "idle" && state.completed;
     if (state.state === "playing" && !state.is_owner) {
       const beat = Math.floor(beatPosition(state,now));
-      if (beat !== this.lastVisualBeat && now >= state.anchor_at) { this.lastVisualBeat = beat; this.pulse(((beat % METERS[s.signature])+METERS[s.signature])%METERS[s.signature]); }
+      if (beat !== this.lastVisualBeat && now >= state.anchor_at) { this.lastVisualBeat = beat; this.pulse(((beat % METERS[s.signature])+METERS[s.signature])%METERS[s.signature], beat < 0); }
     }
     if (this.config.layout === "compact") {
       const label = this.$(".compact-timer");
@@ -462,8 +463,10 @@ export class MetronomeCard extends HTMLElement {
     this.$(".timer-hint").textContent = countIn ? "Starts after count-in" : state.state === "paused" ? "Paused · time saved" : state.state === "playing" ? this.finishLabel() : finished ? "Timer finished" : outside ? "Dial: 5–120 seconds. Use fields for other durations." : `${["Hours","Minutes","Seconds"][this.selectedField]} selected`;
   }
 
-  pulse(beat) {
+  pulse(beat, countIn = false) {
     if (this.advanced || this.config.feedback === "off" || !this.isConnected) return;
+    // Count-in beats use HA's accent colour (dots and glow); exercise beats the active colour.
+    this.$("ha-card").classList.toggle("count-in", countIn);
     const dots = this.all(".dots span");
     dots.forEach((el,i) => {
       el.getAnimations().forEach(animation => animation.cancel());

@@ -125,6 +125,7 @@ async def open_page(session, width=360, height=800, new=False):
 
 
 async def login(cdp, path=DASHBOARD, wait=20, theme=None):
+    cdp.console.clear()  # Runtime.enable replays messages from the previous page
     await cdp.call("Page.navigate", url=f"{HA}/auth/authorize")
     await cdp.idle(3)
     tokens = {
