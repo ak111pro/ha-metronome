@@ -8,6 +8,19 @@ export const DEFAULT_CONFIG = {
   layout: "full", show_tempo: true, show_signature: true, show_timer: true,
   show_advanced: true, feedback: "dots_glow", timer_display: "remaining_finish",
 };
+/* Card YAML keeps only what differs from the defaults: `type` and `entity` first, other
+ * keys in their order, empty strings and default values dropped, unknown keys kept. */
+export function cleanConfig(config) {
+  const out = {};
+  for (const key of ["type", "entity"]) if (config[key] != null) out[key] = config[key];
+  for (const [key, value] of Object.entries(config)) {
+    if (key in out || value === undefined || value === null) continue;
+    if (typeof value === "string" && value.trim() === "" && key !== "type") continue;
+    if (key in DEFAULT_CONFIG && DEFAULT_CONFIG[key] === value) continue;
+    out[key] = typeof value === "string" ? value.trim() : value;
+  }
+  return out;
+}
 export const clamp = (value, min, max) => Math.max(min, Math.min(max, Number(value) || 0));
 export const escapeHTML = value => String(value ?? "").replace(/[&<>"']/g, c => ({
   "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;",

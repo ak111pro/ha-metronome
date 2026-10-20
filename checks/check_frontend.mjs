@@ -1,7 +1,7 @@
 // Pure math/format checks. Does not exercise HA, a DOM or a real AudioContext.
 import assert from "node:assert/strict";
 import {readFileSync, readdirSync} from "node:fs";
-import {METERS, tempo, dialFraction, point, remaining, timeText, escapeHTML, hapticMode, HAPTIC_TYPES, VERSION} from "../custom_components/metronome/frontend/shared.js";
+import {METERS, cleanConfig, tempo, dialFraction, point, remaining, timeText, escapeHTML, hapticMode, HAPTIC_TYPES, VERSION} from "../custom_components/metronome/frontend/shared.js";
 assert.equal(METERS["6/8"],2);
 for (const [bpm,marking] of [[1,"Larghissimo"],[60,"Larghetto"],[120,"Allegro"],[200,"Prestissimo"]]) assert.equal(tempo(bpm),marking);
 for (const inverted of [false,true]) {
@@ -25,6 +25,12 @@ assert.equal(hapticMode({}, {webkit: {messageHandlers: {externalBus: {}}}}), "co
 assert.equal(hapticMode({}, {externalApp: {}}), "companion");
 assert.equal(hapticMode({}, {webkit: {}}), null);
 assert.deepEqual([20, 40, 70].map(ms => HAPTIC_TYPES[ms]), ["light", "medium", "heavy"]);
+// Card editor: YAML keeps type + entity first and only non-default options.
+assert.deepEqual(Object.entries(cleanConfig({layout: "full", show_tempo: true, feedback: "dots_glow",
+  entity: "media_player.m", type: "custom:metronome-card", name: "  ", show_timer: false, extra: 1})),
+  [["type", "custom:metronome-card"], ["entity", "media_player.m"], ["show_timer", false], ["extra", 1]]);
+assert.deepEqual(cleanConfig({type: "t", entity: "e", name: " Practice ", timer_display: "remaining"}),
+  {type: "t", entity: "e", name: "Practice", timer_display: "remaining"});
 // One version everywhere, and every relative module import is versioned (cache busting).
 const root = new URL("../custom_components/metronome/", import.meta.url);
 assert.equal(VERSION, JSON.parse(readFileSync(new URL("manifest.json", root))).version);
