@@ -21,6 +21,15 @@ The user's earlier “Not current device for now” was corrected explicitly to 
 - One output owner per instance, multiple named instances, settings persisted in HA, haptics local. No per-beat service calls, state writes or event entities. Session events only.
 - Card options: entity, optional name, full/compact, tempo/meter visibility, timer/Advanced visibility, dots/dots+glow/off, remaining/remaining+finish. Runtime settings are not card YAML options. Theme colours/font/time format come from HA.
 
+### Owner decisions after the alpha.2 phone test (override the list above)
+
+- Advanced is a fifth square 48 px button in the transport row (Start, Stop, Pause, Timer,
+  Advanced), not a separate entry row; it still opens the separate Advanced view with Back.
+- No device line under the title (title only, centred). Output information lives in
+  Advanced → Output with "Play on this device" (idle only). Still no speaker picker.
+- Card options `primary_color` / `secondary_color` (any CSS colour) may override the theme
+  colours for one card; defaults remain the theme tokens.
+
 ## What is implemented
 
 The package contains the pure state model, HA lifecycle/config flow/storage, entity platforms, permission-checked websocket subscription/control path, output lease, Web Audio engine, full/compact cards, editor and shared expanded view. Examples and architecture notes are included. The model and frontend helpers have small dependency-free checks.

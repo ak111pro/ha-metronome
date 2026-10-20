@@ -106,7 +106,7 @@ async def test_stored_data_of_wrong_type_does_not_block_setup(
 async def test_frontend_module_is_served(hass: HomeAssistant, loaded, hass_client) -> None:
     client = await hass_client()
     for name in ("metronome-card.js", "player.js", "shared.js", "styles.js", "editor.js"):
-        response = await client.get(f"/metronome/{name}?v=0.1.0-alpha.2")
+        response = await client.get(f"/metronome/{name}?v=0.1.0-alpha.3")
         assert response.status == 200, name
         assert response.content_type in ("application/javascript", "text/javascript")
     body = await (await client.get("/metronome/metronome-card.js")).text()

@@ -1,16 +1,28 @@
 # Validation record and next-stage test plan
 
-## Status (2026-10-20, 0.1.0-alpha.2)
+## Status (2026-10-20, 0.1.0-alpha.3)
 
 | Area | Status |
 | --- | --- |
-| Backend in HA (pytest) | **Verified**: 60 tests, HA 2026.10.1 harness |
+| Backend in HA (pytest) | **Verified**: 61 tests, HA 2026.10.1 harness |
 | hassfest 2026.10.1 | **Passes** without warnings (run locally) |
 | HACS action | Not run yet (needs the GitHub repository) |
 | Live HA instance (websocket, REST, restart) | **Verified** on the ha-dev test instance (HA 2026.10.2) |
 | Card in a real browser | **Rendered and driven** in headless Chromium 155 (no audible output) |
-| Android Companion app | **First owner test** (Galaxy S21 Ultra, 2026-10-20): audio and vibration work (vibration needs the phone out of Samsung "Mute" mode); issues found are fixed in alpha.2, re-test pending |
+| Android Companion app | **Owner tests** (Galaxy S21 Ultra, 2026-10-20): alpha.1 audio and vibration work (vibration needs the phone out of Samsung "Mute" mode); alpha.2 re-test confirmed its fixes and asked for the changes in alpha.3 (below); alpha.3 re-test pending |
 | iOS Companion app, audio timing, accessibility | **Not tested** — needs real devices |
+
+### Owner's Android re-test of alpha.2 (Galaxy S21 Ultra, Companion app, ha-dev)
+
+Confirmed fixed: dragging a dial no longer scrolls the page; BPM/timer input focus box
+width; native `media_player` play works reliably (selected output survives hide/reconnect);
+count-in beats in the accent colour; Advanced view controls consistent.
+
+New requests, done in alpha.3: Advanced as a fifth square button next to Timer; card editor
+(Save stayed greyed out, options had no effect — the change listener was never attached);
+primary/secondary colour options; timer hint text ran over the timer arc at phone width
+(and the h/m/s row at 30:00:32 was tight); hide the "This device" line and handle output in
+Advanced; timer fields should follow the handle while dragging, like BPM.
 
 ### HA tests (pytest)
 
@@ -49,6 +61,8 @@ Covered from the list below:
   12–15 s after the last heartbeat, stale lease rejects start, wrong and unloaded entities,
   read-only viewer (subscribe yes, every control `unauthorized`), ordinary non-admin user can
   play, two instances with separate owners, expected rejections not logged as HA errors.
+- `output_user` in the snapshot names the HA user whose page holds the output, follows a
+  hand-off and clears on release; it is not an entity attribute.
 - Static module: every frontend file is served with a JavaScript content type, nothing outside
   `frontend/` is reachable.
 
@@ -86,15 +100,21 @@ anonymous websocket transport (rejected by HA itself before any metronome code r
 Chrome DevTools scripts that drive the real card in headless Chromium against a running HA
 (ha-dev). Start `chromium --headless=new --remote-debugging-port=9333 --mute-audio`, then
 `METRONOME_TOKEN_FILE=<token file> python checks/cdp/<script>.py` (needs `aiohttp`). They
-bypass HA's service worker and the HTTP cache. Results for alpha.2 (Chromium 155, 360 px):
+bypass HA's service worker and the HTTP cache. Results for alpha.2 (Chromium 155, 360 px),
+re-run for alpha.3 where noted:
 
 | Script | What it checks | Result |
 | --- | --- | --- |
 | `touch_drag.py` | Touch drag on the BPM/timer arcs changes the value without scrolling; a swipe from the dial centre scrolls | BPM 100→144, timer 30→51 s, 0 px page movement; centre swipe 95 px (before: BPM drag stopped at 106, timer drag scrolled 81 px) |
 | `bpm_input.py` | BPM focus box width, preview while typing, Enter commits, Escape reverts; timer field width | 124 px box (dial 318 px), marking follows typed value, none for 600; fields 52 px |
 | `ready_client.py` | Native `media_play` after Start/Stop, view switches, compact dialog, more-info, Advanced, page hidden/visible, websocket reconnect, other HA page, 20 s idle; hidden while playing; a second page | 14/14 (before: 7/11, every hide or reconnect lost the selection) |
-| `layout.py` | Advanced controls 48 px, no wrapped/truncated labels, no overflow, Advanced button width; 280/320/360/440 px, light and dark | 0 problems (before: 8) |
+| `layout.py` | Transport row = five 48 × 48 buttons on one line inside the card (alpha.3); Advanced controls 48 px, no wrapped/truncated labels, no overflow; card widths 264/280/320/360/440/500 px, light and dark | alpha.3: 0 problems (five buttons fit down to a 258 px card: gaps 12 → 8 → 4 px) |
 | `haptics.py` | `navigator.vibrate` path, simulated iOS Companion `haptic` path (Long → heavy), hidden without either | passes |
+| `editor.py` (alpha.3) | HA's real dashboard editor (edit dashboard → edit card): every option through the actual ha-form controls (switches, dropdowns, typed text) → Save enabled, HA's card config/YAML has it, preview changes; defaults never written; colours (name, hex, rgb, hsl, var(), invalid text rejected with an inline error, cleared = removed); back at defaults the YAML is `type` + `entity`; one change saved for real, dashboard restored | 22/22 (before the fix: Save stayed disabled, config unchanged) |
+| `colours.py` (alpha.3) | Computed colours of a `primary_color: teal` / `secondary_color: "#9c27b0"` card (handle, Tap, dots, pressed Timer = teal; count-in dots and selected timer field = purple) vs a default card (theme colours), light and dark | 0 problems |
+| `timer_text.py` (alpha.3) | Every text line in the timer dial (Range rects; input digits) inside the arc's inner circle (r 133/320 − 2 px) and below the −1/+1 buttons; card widths 264–500 px; 100 % and 130 % text (Android text zoom emulated by scaling all font sizes); 30:00:32, 45 s, longest finish label | 0 of 36 outside (before: 12 of 24, worst 146 px vs 131 px) |
+| `output.py` (alpha.3) | Title only (no device line); Advanced → Output on two pages: No device / This device / Another device (user), Play on this device without Start, disabled while the other page plays, compact line "Active on another device", hand-off | 9/9 |
+| `timer_drag.py` (alpha.3) | Timer fields sampled 20 ms after each touch move follow the handle; after release fields = HA value with no flick back; BPM drag for comparison | 20/20 live (before: 0/20), BPM 10/10 |
 | `count_in.py` | Count-in dots/glow in `--accent-color`, exercise beats in the active colour, also with reduced motion | passes |
 
 The iOS path is simulated (no `navigator.vibrate`, a stub external bus); HA's frontend

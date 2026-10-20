@@ -1,6 +1,38 @@
 # Changelog
 
-## 0.1.0-alpha.2 (unreleased)
+## 0.1.0-alpha.3 (unreleased)
+
+Second pass after the owner's Android re-test of alpha.2 (which confirmed the alpha.2 fixes).
+
+### Changed
+
+- Advanced is a fifth 48 × 48 button in the transport row (after Timer) instead of its own
+  row; `show_advanced: false` hides it. Narrow cards shrink the gaps (12/8/4 px), never the
+  buttons. The compact card keeps four buttons; its expand control opens the full view.
+- The device line under the card title is gone. Advanced has an **Output** group: This
+  device / Another device (HA user) / No device selected, and **Play on this device**
+  (selects this page without starting; only while idle, like Start). The compact card says
+  "Active on another device" while a session plays elsewhere. The websocket snapshot carries
+  `output_user` for this.
+- Timer dial text stays inside the arc at 280–500 px cards with 130 % text zoom: hint
+  "Dial: 5 s – 2 min", one centred column below the −1/+1 buttons, sizes follow the dial.
+
+### Fixed
+
+- Card editor: Save stayed greyed out and no option had any effect (the change listener was
+  assigned to `ShadowRoot.onchange`, which does not exist). The editor now uses HA's ha-form
+  with selectors (entity selector filtered to Metronome media players) and writes only
+  non-default options.
+- Dragging the timer handle updates the hours/minutes/seconds fields live (like BPM); both
+  dials keep the dragged value until HA confirmed it.
+
+### Added
+
+- Card options `primary_color` and `secondary_color` (any CSS colour; theme colours by
+  default; validated in the editor).
+- `checks/cdp/`: editor round trip, colours, timer text geometry, output group, timer drag.
+
+## 0.1.0-alpha.2
 
 Fixes from the owner's first phone test (Samsung Galaxy S21 Ultra, Android, HA Companion app).
 
