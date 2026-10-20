@@ -1,5 +1,7 @@
 """Primary media player: control plane for a selected foreground audio client."""
 
+from time import time
+
 from homeassistant.components.media_player import (
     MediaPlayerEntity,
     MediaPlayerEntityFeature,
@@ -55,6 +57,9 @@ class MetronomePlayer(MetronomeEntity, MediaPlayerEntity):
         return self.settings | {
             "output_ready": self.coordinator.owner is not None,
             "output": "Current device",
+            # "count_in" from start until the first exercise beat, then "running"; None when
+            # idle. The state stays "playing" throughout (not "buffering").
+            "phase": model.phase(time()),
             "session_id": model.session_id,
             "ends_at": model.ends_at,
             "last_event": model.last_event,

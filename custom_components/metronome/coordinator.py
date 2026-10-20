@@ -34,6 +34,7 @@ class MetronomeCoordinator:
         self.instance_id = uuid4().hex
         self.sequence = 0
         self._finish_cancel = None
+        self._count_in_cancel = None
         self._lease_cancel = None
         self._store = Store(hass, 1, f"{DOMAIN}.{entry.entry_id}")
 
@@ -184,6 +185,7 @@ class MetronomeCoordinator:
             self._finish_cancel = async_call_later(
                 self.hass, max(0, self.model.ends_at - time()), self._finish
             )
+        self._schedule_count_in_end()
         for listener in tuple(self.listeners):
             listener()
         for token, client in tuple(self.clients.items()):
@@ -192,6 +194,27 @@ class MetronomeCoordinator:
             data = {"session_id": self.model.session_id, "reason": event}
             for listener in tuple(self.event_listeners):
                 listener(event, data)
+
+    @callback
+    def _schedule_count_in_end(self):
+        """One state write when the count-in ends (media_player phase attribute). Every
+        start, pause, stop and tempo change goes through _notify, which reschedules it."""
+        if self._count_in_cancel:
+            self._count_in_cancel()
+            self._count_in_cancel = None
+        if (end := self.model.count_in_ends_at()) is not None:
+            self._count_in_cancel = async_call_later(
+                self.hass, max(0, end - time()) + 0.01, self._count_in_end
+            )
+
+    @callback
+    def _count_in_end(self, _now):
+        self._count_in_cancel = None
+        if self.model.phase(time()) == "count_in":  # fired early: try again
+            self._schedule_count_in_end()
+            return
+        for listener in tuple(self.listeners):
+            listener()
 
     @callback
     def _finish(self, _now):
@@ -208,6 +231,9 @@ class MetronomeCoordinator:
 
     @callback
     def async_cancel_timers(self):
+        if self._count_in_cancel:
+            self._count_in_cancel()
+            self._count_in_cancel = None
         if self._finish_cancel:
             self._finish_cancel()
             self._finish_cancel = None

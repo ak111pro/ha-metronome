@@ -147,7 +147,7 @@ A phone in silent/mute/vibrate-off sound mode (for example Samsung's "Mute" mode
 
 | Entity | Purpose |
 | --- | --- |
-| `media_player.<name>` | Play, pause, stop, volume and mute; exposes BPM and meter attributes |
+| `media_player.<name>` | Play, pause, stop, volume and mute; exposes BPM and meter attributes. State stays `playing` during the count-in; attribute `phase` is `count_in` until the first exercise beat, then `running` (`null` when idle), flipped by HA at the exact moment (also after pause/resume or tempo changes during the count-in) |
 | `number.<name>_tempo` | 1–200 BPM |
 | `number.<name>_timer_duration` | Configured seconds, 1–359999 |
 | `select.<name>_time_signature` | 2/4, 3/4, 4/4, 6/8 |

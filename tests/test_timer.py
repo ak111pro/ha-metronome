@@ -305,3 +305,80 @@ async def test_no_state_writes_per_beat(hass: HomeAssistant, owner, frozen) -> N
     assert events == []
     assert (await ws.drain(sub)) == []
     assert hass.states.get(PLAYER).state == "playing"
+
+
+def phase(hass: HomeAssistant) -> str | None:
+    state = hass.states.get(PLAYER)
+    assert state.state in ("idle", "playing", "paused")  # never "buffering"
+    return state.attributes["phase"]
+
+
+async def test_phase_attribute_flips_at_end_of_count_in(
+    hass: HomeAssistant, owner, frozen, long_lease
+) -> None:
+    assert phase(hass) is None
+    await configure(hass, count_in=1)  # 4 beats at 120 BPM = 2 s after the 0.2 s lead
+    await call(hass, "media_player", "media_play", PLAYER)
+    assert hass.states.get(PLAYER).state == "playing"
+    assert phase(hass) == "count_in"
+    await advance(hass, frozen, LEAD + 1.9)
+    assert phase(hass) == "count_in"
+    events = async_capture_events(hass, EVENT_STATE_CHANGED)
+    await advance(hass, frozen, 0.2)  # the scheduled callback writes the state once
+    assert phase(hass) == "running"
+    assert hass.states.get(PLAYER).state == "playing"
+    assert [e.data["entity_id"] for e in events].count(PLAYER) == 1
+    await advance(hass, frozen, 10)
+    await call(hass, "media_player", "media_stop", PLAYER)
+    assert phase(hass) is None
+
+
+async def test_phase_without_count_in_is_running(hass: HomeAssistant, owner, frozen) -> None:
+    await call(hass, "media_player", "media_play", PLAYER)
+    assert phase(hass) == "running"
+
+
+async def test_phase_pause_and_stop_during_count_in(
+    hass: HomeAssistant, owner, frozen, long_lease
+) -> None:
+    await configure(hass, timer=True, duration=30, count_in=1)
+    await call(hass, "media_player", "media_play", PLAYER)
+    await advance(hass, frozen, LEAD + 1.0)  # two of four count-in beats
+    await call(hass, "media_player", "media_pause", PLAYER)
+    assert hass.states.get(PLAYER).state == "paused"
+    await advance(hass, frozen, 10)  # the old end time passes while paused
+    assert phase(hass) == "count_in"
+    await call(hass, "media_player", "media_play", PLAYER)
+    await advance(hass, frozen, LEAD + 0.9)
+    assert phase(hass) == "count_in"
+    await advance(hass, frozen, 0.2)
+    assert phase(hass) == "running"
+    # Stop during a new count-in: no stale callback flips anything afterwards.
+    await call(hass, "media_player", "media_stop", PLAYER)
+    await call(hass, "media_player", "media_play", PLAYER)
+    await advance(hass, frozen, LEAD + 0.5)
+    await call(hass, "media_player", "media_stop", PLAYER)
+    coordinator = hass.config_entries.async_entries("metronome")[0].runtime_data
+    assert coordinator._count_in_cancel is None
+    await advance(hass, frozen, 5)
+    assert phase(hass) is None
+
+
+async def test_phase_follows_tempo_change_during_count_in(
+    hass: HomeAssistant, owner, frozen, long_lease
+) -> None:
+    await configure(hass, count_in=1)
+    await call(hass, "media_player", "media_play", PLAYER)
+    await advance(hass, frozen, LEAD + 0.5)  # one beat played, three left
+    await configure(hass, bpm=60)  # three beats left, now one second each
+    await advance(hass, frozen, 2.0)  # past the old end (1.5 s), before the new one (3 s)
+    assert phase(hass) == "count_in"
+    await advance(hass, frozen, 1.1)
+    assert phase(hass) == "running"
+    # Faster tempo: the flip comes earlier.
+    await call(hass, "media_player", "media_stop", PLAYER)
+    await call(hass, "media_player", "media_play", PLAYER)  # 4 beats at 60 = 4 s
+    await advance(hass, frozen, LEAD + 1.0)
+    await configure(hass, bpm=180)  # 3 beats left at 1/3 s = 1 s
+    await advance(hass, frozen, 1.1)
+    assert phase(hass) == "running"

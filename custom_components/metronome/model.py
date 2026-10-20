@@ -62,6 +62,18 @@ class Session:
             return self.anchor_beat + max(0.0, now - self.anchor_at) * self.settings["bpm"] / 60
         return self.anchor_beat
 
+    def count_in_ends_at(self):
+        """UTC time the count-in ends while playing in it, else None (paused: frozen)."""
+        if self.state == "playing" and self.anchor_beat < 0:
+            return self.anchor_at - self.anchor_beat * 60 / self.settings["bpm"]
+        return None
+
+    def phase(self, now):
+        """None when idle; "count_in" before the first exercise beat, then "running"."""
+        if self.state == "idle":
+            return None
+        return "count_in" if self.position(now) < 0 else "running"
+
     def remaining_at(self, now):
         # While playing, self.remaining is the time left at the last (re)start. It caps
         # the value during the start lead and count-in, when ends_at - now is larger.
@@ -143,7 +155,7 @@ class Session:
         return {
             "settings": dict(self.settings),
             "state": self.state,
-            "phase": "count_in" if self.state != "idle" and self.position(now) < 0 else "running",
+            "phase": self.phase(now) or "running",
             "session_id": self.session_id,
             "revision": self.revision,
             "anchor_at": self.anchor_at,

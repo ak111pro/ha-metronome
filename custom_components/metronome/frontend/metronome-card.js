@@ -379,16 +379,11 @@ export class MetronomeCard extends HTMLElement {
     const name = this.config.name || state.name;
     this.$(".main .name").textContent = name;
     this.$(".breadcrumb").textContent = name;
-    const status = active ? "Active" : state.state === "paused" ? "Paused" : "Idle";
-    const meta = this.meta(s);
+    this.renderStatus(state, this.player.now());
     if (this.config.layout === "compact") {
-      // The full card's Advanced view names the output; here only when it plays elsewhere.
-      const elsewhere = state.state !== "idle" && state.output_ready && !state.is_owner;
-      this.$(".meta").textContent = `${status}${elsewhere ? " on another device" : ""} · ${meta}`;
       this.$(".compact-bpm").textContent = s.bpm;
       this.$(".compact-info").setAttribute("aria-label", `Open ${name} controls`);
     } else {
-      this.$(".status").textContent = status;
       const bpmInput = this.$(".bpm"), shown = this.shownBpm(s);
       bpmInput.defaultValue = s.bpm;
       if (this.shadowRoot.activeElement !== bpmInput && this.dragBpm == null) bpmInput.value = s.bpm;
@@ -458,12 +453,29 @@ export class MetronomeCard extends HTMLElement {
     if (now.toDateString() !== date.toDateString()) Object.assign(format,{month:"short",day:"numeric"});
     return `Ends ${new Intl.DateTimeFormat(locale.language || undefined,format).format(date)}`;
   }
+  // "Count-in" from Start until the first exercise beat, then "Active" (HA's media_player
+  // phase attribute flips at the same moment). Re-rendered every clock tick.
+  renderStatus(state, now) {
+    const status = state.state === "paused" ? "Paused" : state.state !== "playing" ? "Idle"
+      : beatPosition(state, now) < 0 ? "Count-in" : "Active";
+    if (this.config.layout === "compact") {
+      // The full card's Advanced view names the output; here only when it plays elsewhere.
+      const elsewhere = state.state !== "idle" && state.output_ready && !state.is_owner;
+      const text = `${status}${elsewhere ? " on another device" : ""} · ${this.meta(state.settings)}`;
+      const meta = this.$(".meta");
+      if (meta.textContent !== text) meta.textContent = text;
+    } else {
+      const el = this.$(".status");
+      if (el.textContent !== status) el.textContent = status;
+    }
+  }
   updateClock() {
     const state = this.player?.state;
     if (!state || !this.isConnected) return;
     const s = state.settings, locked = state.state !== "idle", now = this.player.now();
     const countIn = state.state === "playing" && beatPosition(state,now) < 0;
     const rem = remaining(state,now);
+    this.renderStatus(state, now);
     const finished = state.state === "idle" && state.completed;
     if (state.state === "playing" && !state.is_owner) {
       const beat = Math.floor(beatPosition(state,now));
