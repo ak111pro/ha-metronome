@@ -27,6 +27,10 @@ The user's earlier “Not current device for now” was corrected explicitly to 
   Advanced), not a separate entry row; it still opens the separate Advanced view with Back.
 - No device line under the title (title only, centred). Output information lives in
   Advanced → Output with "Play on this device" (idle only). Still no speaker picker.
+- (alpha.5) A native Tile / more-info Play selects the page the user just tapped (gesture
+  "arm" within 3 s, same HA user), even without Start in the card; this replaces "not
+  automatically the device that calls media_play". Automations keep using the selected
+  device.
 - Card options `primary_color` / `secondary_color` (any CSS colour) may override the theme
   colours for one card; defaults remain the theme tokens.
 

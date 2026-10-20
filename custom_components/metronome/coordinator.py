@@ -10,7 +10,7 @@ from homeassistant.exceptions import ServiceValidationError
 from homeassistant.helpers.event import async_call_later, async_track_time_interval
 from homeassistant.helpers.storage import Store
 
-from .const import DOMAIN, LEASE_SECONDS
+from .const import ARM_SECONDS, ARMED, DOMAIN, LEASE_SECONDS
 from .model import Session
 
 _LOGGER = logging.getLogger(__name__)
@@ -124,13 +124,40 @@ class MetronomeCoordinator:
         self._notify()
 
     @callback
-    def command(self, action):
+    def armed_client(self, user_id):
+        """The subscribed page of this user that most recently saw a gesture (<= 3 s)."""
+        if not user_id:
+            return None
+        armed = self.hass.data.get(ARMED, {})
+        best, best_at = None, None
+        for token in self.clients:
+            connection = token[0]
+            at = armed.get(id(connection), (None, None))
+            if at[0] is not connection or monotonic() - at[1] > ARM_SECONDS:
+                continue
+            if getattr(connection.user, "id", None) != user_id:
+                continue
+            if best_at is None or at[1] > best_at:
+                best, best_at = token, at[1]
+        return best
+
+    @callback
+    def command(self, action, user_id=None):
+        """user_id: the HA user of a native play (service call); None for the card/automations."""
         now = time()
         # Resolve an elapsed countdown before processing a late user command.
         if event := self.model.finish_due(now):
             self._notify(event)
         try:
             if action == "start":
+                # Native play from idle: the caller's own page that was just tapped (it sent
+                # metronome/arm before the service call) takes output, even over a ready one.
+                # A paused session resumes only on its owner.
+                if self.model.state == "idle" and (token := self.armed_client(user_id)):
+                    if token != self.owner:
+                        self.owner = token
+                        self._notify()
+                    self.clients[token]["seen"] = monotonic()
                 if (
                     self.owner is None
                     or monotonic() - self.clients[self.owner]["seen"] > LEASE_SECONDS

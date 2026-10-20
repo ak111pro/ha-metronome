@@ -7,6 +7,10 @@ EVENT_TYPES = ["started", "paused", "resumed", "stopped", "finished", "interrupt
 SIGNATURES = {"2/4": 2, "3/4": 3, "4/4": 4, "6/8": 2}
 MAX_DURATION = 359999  # 99:59:59
 LEASE_SECONDS = 12
+# A page that saw a user gesture this recently may take output when the same user's
+# native play (Tile, more-info) arrives: the device you tapped on wins.
+ARM_SECONDS = 3
+ARMED = f"{DOMAIN}_armed"
 DEFAULTS = {
     "bpm": 120,
     "signature": "4/4",

@@ -61,7 +61,9 @@ class MetronomePlayer(MetronomeEntity, MediaPlayerEntity):
         }
 
     async def async_media_play(self):
-        self.coordinator.command("start")
+        # The service call's user lets the page that user just tapped take output.
+        context = self._context
+        self.coordinator.command("start", user_id=context.user_id if context else None)
 
     async def async_media_pause(self):
         self.coordinator.command("pause")

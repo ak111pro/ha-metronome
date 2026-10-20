@@ -42,7 +42,21 @@ There is no separate audio dependency, Node build step or software to install on
 
 ## Playback and device selection
 
-**“Current device” means the browser/WebView where Start is tapped in this custom card.** It is not a speaker entity and is not automatically the device that happens to call `media_player.media_play`.
+**“Current device” means the phone or browser page you tap on**: Start in the metronome card,
+or Play on a native Tile, in more-info or on the device page. It is not a speaker entity.
+
+**Native play without the card.** The card's JavaScript is a dashboard resource, so it runs on
+every dashboard page, also pages without a metronome card. On every tap or key press it
+(1) resumes the page's AudioContext inside that gesture and (2) sends `metronome/arm` to HA,
+in the capture phase, so it arrives before the Tile's own `media_player.media_play` on the
+same connection. Each page also keeps a standby subscription for every metronome instance.
+When `media_play` (or `media_play_pause`) arrives while the session is idle and a page of the
+**same HA user** that calls it was tapped within 3 seconds, that page takes output and plays,
+even if another device was ready: the device you tapped on wins. Otherwise the already
+selected device plays; otherwise the call fails with "No device is ready to play. Tap Start
+once …". A paused session resumes only on the device that holds it. Automations and scripts
+have no gesture and use the selected device. The AudioContext is suspended again about 5 s
+after the last tap unless this page is the selected output.
 
 **Advanced → Output** shows where the sound comes from: *This device* (this page plays),
 *Another device (name)* (another page holds the output; the name is the HA user logged in
@@ -53,11 +67,11 @@ playback). There is no speaker picker; output is always a page's own audio. The 
 has no device line; the compact card adds "on another device" to its state while a session
 plays elsewhere.
 
-After that gesture, native HA controls and automations can control that selected, connected client. They cannot unlock audio in a fresh browser, choose a remote phone implicitly, or start a closed Companion app. The selected client remains ready after Stop while its page stays visible. Opening the card elsewhere does not duplicate sound. To move output while a session is active or paused, stop it first, then tap Start on the other device.
+After that gesture, native HA controls and automations can control that selected, connected client. Automations cannot unlock audio in a fresh browser, choose a remote phone implicitly, or start a closed Companion app. The selected client remains ready after Stop while its page stays visible. Opening the card elsewhere does not duplicate sound. To move output while a session is active or paused, stop it first, then tap Start on the other device.
 
 Leaving the app, locking the screen, losing the connection or suspending its audio interrupts playback. There is no background-playback guarantee and no automatic resumption of a session. A heartbeat lease provides a server-side fallback if a client vanishes. Navigation between dashboard views, the compact card's dialog, HA more-info dialogs and other HA pages (for example the device page) within the same HA page keep the engine and the selection alive.
 
-When a page that already tapped Start becomes visible again or its connection to HA comes back, it selects itself again as output **without** a new tap, provided no other device was selected meanwhile and the browser lets it resume audio. Playback itself does not resume. If the browser refuses (for example after an OS audio interruption), the card asks for Start again. A page that never tapped Start is never selected.
+When a page that already tapped Start becomes visible again or its connection to HA comes back, it selects itself again as output **without** a new tap, provided no other device was selected meanwhile and the browser lets it resume audio. Playback itself does not resume. If the browser refuses (for example after an OS audio interruption), the card asks for Start again. A page that was never tapped (Start, Play on this device, or a native Play) is never selected.
 
 ## Timer behavior
 

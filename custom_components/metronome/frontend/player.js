@@ -5,6 +5,59 @@ import {METERS, HAPTIC_TYPES, beatPosition, hapticMode} from "./shared.js?v=0.1.
 
 const REGISTRY = Symbol.for("metronome.players.v1");
 globalThis[REGISTRY] ||= new WeakMap();
+
+/* One AudioContext per page, shared by all instances. The card module is a global
+ * dashboard resource, so this also runs on pages without a metronome card: every user
+ * gesture (capture phase, before e.g. the Tile's own click handler) resumes the context
+ * and tells HA "this page was just tapped" (metronome/arm). A native play from the same
+ * user within 3 s then selects this page as output (see coordinator.armed_client). The
+ * context is suspended again 5 s after the last gesture unless a page is a ready output. */
+const SHARED = Symbol.for("metronome.audio.v1");
+const shared = globalThis[SHARED] ||= {ctx: null, gestureAt: -Infinity, armAt: -Infinity, timer: null, players: new Set(), installed: false};
+export const GESTURE_MS = 5000;
+export function audioContext() {
+  const Audio = window.AudioContext || window.webkitAudioContext;
+  if (!Audio) return null;
+  if (!shared.ctx || shared.ctx.state === "closed") shared.ctx = new Audio({latencyHint: "interactive"});
+  return shared.ctx;
+}
+export const recentGesture = () => performance.now() - shared.gestureAt < GESTURE_MS;
+function scheduleSuspend() {
+  clearTimeout(shared.timer);
+  shared.timer = setTimeout(() => {
+    if ([...shared.players].some(p => p.readyForAudio) || recentGesture()) return scheduleSuspend();
+    if (shared.ctx?.state === "running") shared.ctx.suspend().catch(() => {});
+  }, GESTURE_MS);
+}
+// Metronome media players known to this page: each gets a (standby) subscription, so HA
+// can hand output to this page even when no metronome card is on it (Tile, more-info).
+export function standby(hass = document.querySelector("home-assistant")?.hass) {
+  if (!hass?.connection || !hass.states) return [];
+  return Object.keys(hass.states)
+    .filter(id => id.startsWith("media_player.") && hass.states[id].attributes?.output === "Current device")
+    .map(id => getPlayer(hass, id));
+}
+function onGesture(event) {
+  if (!event.isTrusted) return;
+  const hass = document.querySelector("home-assistant")?.hass;
+  if (!standby(hass).length) return;
+  shared.gestureAt = performance.now();
+  const ctx = audioContext();
+  if (ctx && ctx.state !== "running") ctx.resume().catch(() => {});
+  scheduleSuspend();
+  // One arm per tap (pointerup, touchend and click all fire); it precedes the service call.
+  if (shared.gestureAt - shared.armAt > 250) {
+    shared.armAt = shared.gestureAt;
+    hass.connection.sendMessagePromise({type: "metronome/arm"}).catch(() => {});
+  }
+}
+if (!shared.installed && typeof window !== "undefined") {
+  shared.installed = true;
+  for (const type of ["pointerup", "touchend", "click", "keydown"]) window.addEventListener(type, onGesture, {capture: true, passive: true});
+  // Standby subscriptions as soon as HA's frontend has its state (no card needed).
+  let tries = 0;
+  const boot = setInterval(() => { if (standby().length || ++tries > 60) clearInterval(boot); }, 1000);
+}
 export function getPlayer(hass, entity) {
   let map = globalThis[REGISTRY].get(hass.connection);
   if (!map) globalThis[REGISTRY].set(hass.connection, map = new Map());
@@ -30,6 +83,7 @@ class Player extends EventTarget {
     this.vibration = false;
     this.lastFinished = null;
     this.error = "";
+    shared.players.add(this);
     this.ready = new Promise((resolve, reject) => {
       this.resolveReady = resolve;
       connection.subscribeMessage(state => this.receive(state), {
@@ -85,13 +139,25 @@ class Player extends EventTarget {
     if (this.state && state.instance_id === this.state.instance_id && state.sequence < this.state.sequence) return;
     const previous = this.state;
     this.state = state;
+    // HA selected this page after a native play right after a tap here (metronome/arm):
+    // the gesture already unlocked the shared AudioContext, so take the output.
+    if (state.is_owner && !this.readyForAudio && !this.rearming && recentGesture() && this.attachAudio()) {
+      this.readyForAudio = true;
+      this.armed = true;
+      this.error = "";
+      if (this.audio.state !== "running") {
+        this.audio.resume().then(() => { this.timeline = null; if (this.state) this.receive(this.state); })
+          .catch(() => this.interrupt("Tap Start to enable audio on this device."));
+      }
+    }
     this.updateGain();
     const timeline = `${state.session_id}/${state.anchor_at}/${state.settings.bpm}/${state.state}/${state.is_owner}`;
     if (timeline !== this.timeline) {
       this.timeline = timeline;
       const preserveChime = state.is_owner && state.state === "idle" && state.last_event === "finished" && this.lastFinished === state.session_id;
       this.silence(!preserveChime);
-      if (state.state === "playing" && state.is_owner && this.readyForAudio && !document.hidden) this.schedule();
+      if (state.state === "playing" && state.is_owner && this.readyForAudio && !document.hidden && this.audio?.state === "running") this.schedule();
+      else if (state.state === "playing" && state.is_owner && this.readyForAudio) this.timeline = null;
     }
     if (previous?.state === "playing" && state.state === "idle" && state.last_event === "finished" && state.is_owner) this.finished();
     if (state.is_owner && !this.readyForAudio && !this.rearming) {
@@ -133,17 +199,7 @@ class Player extends EventTarget {
    * inside the tap (user gesture), which is what lets the browser enable audio. */
   async claim() {
     // resume() is invoked directly during the click gesture, before network waits.
-    const Audio = window.AudioContext || window.webkitAudioContext;
-    if (!Audio) throw new Error("Audio is unavailable in this browser");
-    if (!this.audio || this.audio.state === "closed") {
-      this.audio = new Audio({latencyHint: "interactive"});
-      this.master = this.audio.createGain();
-      this.master.connect(this.audio.destination);
-      this.audio.addEventListener("statechange", () => {
-        if (this.readyForAudio && this.audio.state !== "running") this.interrupt("Audio was interrupted. Tap Start to enable it again.");
-        else if (this.audio.state === "running") this.rearm();
-      });
-    }
+    if (!this.attachAudio()) throw new Error("Audio is unavailable in this browser");
     await this.audio.resume();
     if (this.audio.state !== "running") throw new Error("Tap Start again to allow audio on this device");
     await this.ready;
@@ -156,6 +212,24 @@ class Player extends EventTarget {
       if (!this.state?.is_owner) this.readyForAudio = false;
       throw error;
     }
+  }
+
+  // Use the page's shared AudioContext (own gain node per instance).
+  attachAudio() {
+    const ctx = audioContext();
+    if (!ctx) return null;
+    if (this.audio !== ctx) {
+      this.audio = ctx;
+      this.master = ctx.createGain();
+      this.master.connect(ctx.destination);
+      ctx.addEventListener("statechange", () => {
+        if (this.audio !== ctx) return;
+        if (this.readyForAudio && ctx.state !== "running") this.interrupt("Audio was interrupted. Tap Start to enable it again.");
+        else if (ctx.state === "running") this.rearm();
+      });
+      this.updateGain();
+    }
+    return ctx;
   }
 
   async start() {
@@ -192,6 +266,7 @@ class Player extends EventTarget {
     this.silence();
     const wasReady = this.readyForAudio;
     this.readyForAudio = false;
+    if (wasReady) scheduleSuspend();
     if (wasReady) this.send("release").catch(() => {});
     if (error) this.fail(error);
   }

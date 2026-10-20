@@ -1,6 +1,7 @@
 """Authenticated controls. Ownership is bound to a server-side WS connection."""
 
 from functools import wraps
+from time import monotonic
 
 import probatio as vol
 
@@ -11,7 +12,7 @@ from homeassistant.core import callback
 from homeassistant.exceptions import ServiceValidationError, Unauthorized
 from homeassistant.helpers import entity_registry as er
 
-from .const import DOMAIN
+from .const import ARM_SECONDS, ARMED, DOMAIN
 
 
 def _resolve(hass, connection, entity_id, policy):
@@ -44,6 +45,7 @@ def _expected_errors(handler):
 def async_register_commands(hass):
     websocket_api.async_register_command(hass, subscribe)
     websocket_api.async_register_command(hass, control)
+    websocket_api.async_register_command(hass, arm)
 
 
 @websocket_api.websocket_command(
@@ -90,3 +92,18 @@ def control(hass, connection, msg):
     else:
         coordinator.command(action)
     connection.send_result(msg["id"], coordinator.snapshot(token))
+
+
+@websocket_api.websocket_command({vol.Required("type"): "metronome/arm"})
+@callback
+def arm(hass, connection, msg):
+    """A user gesture on this page (sent by the card module in the capture phase, so it
+    arrives before the Tile's own media_play on the same connection). Fire and forget:
+    remembered for ARM_SECONDS, keyed by connection; stale entries are pruned here."""
+    armed = hass.data.setdefault(ARMED, {})
+    now = monotonic()
+    for key, (_, at) in tuple(armed.items()):
+        if now - at > ARM_SECONDS * 4:
+            del armed[key]
+    armed[id(connection)] = (connection, now)
+    connection.send_result(msg["id"])
