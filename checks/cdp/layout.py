@@ -2,7 +2,7 @@
 
 python layout.py <out-dir> [label]   e.g. label=before / after
 Checks: transport row = five 48 x 48 buttons (Start, Stop, Pause, Timer, Advanced) on one
-line inside the card; Advanced: one control height, single-line labels, nothing wider than
+line inside the card; dial handles have a 48 px hit circle; Advanced: one control height, single-line labels, nothing wider than
 the card.
 """
 
@@ -28,7 +28,9 @@ MEASURE = f"""(() => {{
       e.getBoundingClientRect().left < card.left - 0.5)).map(e => e.className || e.localName);
   const row = [...r.querySelectorAll('.main .transport button')].filter(e => e.offsetParent)
     .map(e => e.getBoundingClientRect());
-  return {{transport: {{count: row.length,
+  const grabs = [...r.querySelectorAll('.main .grab')].filter(e => e.closest('.dial').offsetParent)
+    .map(e => Math.round(e.getBoundingClientRect().width));
+  return {{grabs, transport: {{count: row.length,
       sizes: [...new Set(row.map(b => `${{Math.round(b.width)}}x${{Math.round(b.height)}}`))],
       rows: new Set(row.map(b => Math.round(b.top))).size,
       inside: row.every(b => b.left >= card.left && b.right <= card.right)}},triggers: h('.advanced-view .select-trigger'), tiles: h('.advanced-view .tile'),
@@ -69,6 +71,8 @@ async def main():
                 await cdp.idle(1.5)
                 await cdp.js("window.scrollTo(0, 0); 1")
                 main_view = await cdp.js(MEASURE)
+                if any(abs(w - 48) > 1 for w in main_view["grabs"]):
+                    bad.append((theme, width, "handle hit circle not 48 px", main_view["grabs"]))
                 t = main_view["transport"]
                 if t["count"] != 5 or t["sizes"] != ["48x48"] or t["rows"] != 1 or not t["inside"]:
                     bad.append((theme, width, "transport", t))

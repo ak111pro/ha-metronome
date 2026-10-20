@@ -6,7 +6,7 @@ import {DEFAULT_CONFIG, COLOR_KEYS, METERS, escapeHTML as esc, clamp, tempo, rem
 const icon = name => `<ha-icon icon="mdi:${name}" aria-hidden="true"></ha-icon>`;
 const button = (action, label, glyph, cls = "control") =>
   `<button type="button" class="${cls}" data-action="${action}" aria-label="${label}" title="${label}">${icon(glyph)}</button>`;
-const svg = () => `<svg viewBox="0 0 320 320" aria-hidden="true"><path class="track"></path><path class="value"></path><path class="hit"></path><circle class="knob" r="9"></circle></svg>`;
+const svg = () => `<svg viewBox="0 0 320 320" aria-hidden="true"><path class="track"></path><path class="value"></path><circle class="knob" r="9"></circle><circle class="grab" r="24"></circle></svg>`;
 const pickers = {
   signature: {label: "Time signature", icon: "music-note", options: Object.keys(METERS).map(v => [v,v])},
   count_in: {label: "Count-in", icon: "format-list-numbered", options: [[0,"Off"],[1,"1 bar"],[2,"2 bars"]]},
@@ -276,14 +276,16 @@ export class MetronomeCard extends HTMLElement {
   bindDial(selector, inverted) {
     const dial = this.$(selector);
     if (!dial) return;
-    // Only the arc's stroke hit area starts a drag. touch-action:none (path and its svg)
-    // stops the browser from turning the gesture into a page scroll; a touch that starts
-    // anywhere else in the dial still scrolls normally.
-    const path = dial.querySelector(".hit");
-    let dragging = null;
+    // Only the handle starts a drag (a 48 px circle around the knob): a tap or swipe on
+    // the arc track never changes the value, and the page scrolls normally there. The
+    // handle has touch-action:none, so dragging it never scrolls the page.
+    const path = dial.querySelector(".grab");
+    let dragging = null, moved = false;
+    new ResizeObserver(() => this.sizeGrab(dial)).observe(dial);
     const move = event => {
       if (dragging !== event.pointerId) return;
       event.preventDefault();
+      moved = true;
       const rect = dial.querySelector("svg").getBoundingClientRect();
       const fraction = dialFraction(event.clientX-rect.left-rect.width/2,event.clientY-rect.top-rect.height/2,inverted);
       const value = Math.round(inverted ? 5 + fraction*115 : 1 + fraction*199);
@@ -295,7 +297,7 @@ export class MetronomeCard extends HTMLElement {
     };
     const end = event => {
       if (dragging !== event.pointerId) return;
-      if (event.type === "pointerup") move(event);
+      if (event.type === "pointerup" && moved) move(event);
       dragging = null;
       dial.classList.remove("dragging");
       if (path.hasPointerCapture?.(event.pointerId)) path.releasePointerCapture(event.pointerId);
@@ -312,9 +314,10 @@ export class MetronomeCard extends HTMLElement {
       event.preventDefault();
       dragging = event.pointerId;
       this.dragToken = (this.dragToken || 0) + 1;
+      moved = false;
       dial.classList.add("dragging");
       try { path.setPointerCapture(event.pointerId); } catch (_) { /* pointer already gone */ }
-      move(event);
+      // No value change on press: a tap on the handle changes nothing; moving does.
     });
     path.addEventListener("pointermove", move);
     path.addEventListener("pointerup", end);
@@ -353,12 +356,20 @@ export class MetronomeCard extends HTMLElement {
     const start = inverted ? 225 : 135, direction = inverted ? -1 : 1;
     const sweep = direction * 270 * clamp(fraction,0,1), p = point(start + sweep);
     dial.querySelector(".track").setAttribute("d",arc(start,direction*270));
-    dial.querySelector(".hit").setAttribute("d",arc(start,direction*270));
+
     const value = dial.querySelector(".value");
     value.setAttribute("d",arc(start, Math.abs(sweep) < .001 ? direction*.001 : sweep));
     value.style.opacity = fraction <= 0 ? "0" : "1";
     dial.querySelector(".knob").setAttribute("cx",p.x);
     dial.querySelector(".knob").setAttribute("cy",p.y);
+    const grab = dial.querySelector(".grab");
+    grab.setAttribute("cx",p.x); grab.setAttribute("cy",p.y);
+    this.sizeGrab(dial);
+  }
+  // The grab circle is 48 CSS px wide whatever the dial's size (viewBox is 320 units).
+  sizeGrab(dial) {
+    const width = dial.querySelector("svg").getBoundingClientRect().width;
+    if (width > 0) dial.querySelector(".grab").setAttribute("r", 24 * 320 / width);
   }
 
   update() {

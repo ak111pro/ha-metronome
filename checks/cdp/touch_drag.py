@@ -1,6 +1,7 @@
 """Touch-drag the BPM and timer dial handles: the value follows, the page must not scroll.
 
-A vertical swipe that starts in the dial centre (outside the arc) must still scroll.
+A vertical swipe that starts in the dial centre or on the arc track (anywhere but the
+handle) must still scroll and must not change the value.
 """
 
 import math
@@ -61,6 +62,18 @@ async def main():
         g3 = await cdp.js(GEOM + "('.bpm-dial')")
         print(f"centre swipe: page moved {g3['top'] - g2['top']:.0f}px (must scroll)")
         assert g3["top"] < g2["top"] - 50
+
+        # A swipe that starts on the arc track (not the handle) scrolls too (alpha.6).
+        await cdp.js("window.scrollTo(0, 40); 1")
+        await cdp.idle(1)
+        g4 = await cdp.js(GEOM + "('.bpm-dial')")
+        tx, ty = arc_points(g4, 180, 180, 1)[0]
+        await swipe(cdp, [(tx, ty - 10 * i) for i in range(12)])
+        g5 = await cdp.js(GEOM + "('.bpm-dial')")
+        print(
+            f"track swipe: page moved {g5['top'] - g4['top']:.0f}px, BPM {g4['bpm']} -> {g5['bpm']} (must scroll, no change)"
+        )
+        assert g5["top"] < g4["top"] - 50 and g5["bpm"] == g4["bpm"]
 
         await cdp.js(
             f"{FULL}.shadowRoot.querySelector('.timer-dial').scrollIntoView({{block:'center'}}); 1"

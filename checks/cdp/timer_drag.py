@@ -1,6 +1,6 @@
 """Timer handle drag: the h/m/s fields follow the finger live, like the BPM number.
 
-Touch-drags the timer handle in small steps from 30 s and samples the fields after every
+Touch-drags the timer handle (the only drag target since alpha.6) in small steps from 30 s and samples the fields after every
 move (before HA has answered, the fields must already show the dial's value), then checks
 the value after release: fields, committed duration and arc agree, and the fields never
 jump back to an older value. Also samples the BPM number during a BPM drag for comparison.
