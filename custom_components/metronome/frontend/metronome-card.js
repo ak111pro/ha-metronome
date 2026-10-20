@@ -552,8 +552,10 @@ export class MetronomeCard extends HTMLElement {
     if (!dialog) {
       dialog = document.createElement("dialog");
       dialog.setAttribute("aria-label",this.config.name || "Metronome controls");
-      dialog.innerHTML = `<div class="close-row">${button("close","Close","close","close")}</div>`;
+      // Close sits on the title row (top right); the inner card's header is tightened.
+      dialog.innerHTML = button("close","Close","close","dialog-close");
       const card = document.createElement("metronome-card");
+      card.setAttribute("in-dialog","");
       card.setConfig({...this.config,layout:"full",show_title:true}); card.hass = this._hass;
       dialog.append(card); this.shadowRoot.append(dialog);
       dialog.querySelector("button").addEventListener("click",() => dialog.close());
