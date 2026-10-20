@@ -1,11 +1,13 @@
 """Authenticated controls. Ownership is bound to a server-side WS connection."""
 
+from functools import wraps
+
 import probatio as vol
 
 from homeassistant.auth.permissions.const import POLICY_CONTROL, POLICY_READ
 from homeassistant.components import websocket_api
 from homeassistant.core import callback
-from homeassistant.exceptions import HomeAssistantError, Unauthorized
+from homeassistant.exceptions import ServiceValidationError, Unauthorized
 from homeassistant.helpers import entity_registry as er
 
 from .const import DOMAIN
@@ -16,11 +18,25 @@ def _resolve(hass, connection, entity_id, policy):
         raise Unauthorized()
     item = er.async_get(hass).async_get(entity_id)
     if item is None or item.platform != DOMAIN or item.domain != "media_player":
-        raise HomeAssistantError("Select a Metronome media player entity")
+        raise ServiceValidationError("Select a Metronome media player entity")
     coordinator = hass.data[DOMAIN].get(item.config_entry_id)
     if coordinator is None:
-        raise HomeAssistantError("Metronome is unavailable")
+        raise ServiceValidationError("Metronome is unavailable")
     return coordinator
+
+
+def _expected_errors(handler):
+    """Answer user errors (stale subscription, claim while playing, ...) with an error
+    result only. Raising them would make HA log every rejected tap as an ERROR."""
+
+    @wraps(handler)
+    def wrapper(hass, connection, msg):
+        try:
+            handler(hass, connection, msg)
+        except ServiceValidationError as err:
+            connection.send_error(msg["id"], websocket_api.ERR_HOME_ASSISTANT_ERROR, str(err))
+
+    return wrapper
 
 
 @callback
@@ -36,6 +52,7 @@ def async_register_commands(hass):
     }
 )
 @callback
+@_expected_errors
 def subscribe(hass, connection, msg):
     coordinator = _resolve(hass, connection, msg["entity_id"], POLICY_READ)
     token = (connection, msg["id"])
@@ -58,13 +75,14 @@ def subscribe(hass, connection, msg):
     }
 )
 @callback
+@_expected_errors
 def control(hass, connection, msg):
     coordinator = _resolve(hass, connection, msg["entity_id"], POLICY_CONTROL)
     token = (connection, msg.get("subscription"))
     action = msg["action"]
     if action in ("claim", "heartbeat", "release"):
         if token not in coordinator.clients:
-            raise HomeAssistantError("This connection has no matching metronome subscription")
+            raise ServiceValidationError("This connection has no matching metronome subscription")
         getattr(coordinator, action)(token)
     elif action == "configure":
         coordinator.configure(msg.get("settings", {}))

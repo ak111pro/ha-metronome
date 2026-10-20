@@ -6,7 +6,7 @@ from time import monotonic, time
 from uuid import uuid4
 
 from homeassistant.core import callback
-from homeassistant.exceptions import HomeAssistantError
+from homeassistant.exceptions import ServiceValidationError
 from homeassistant.helpers.event import async_call_later, async_track_time_interval
 from homeassistant.helpers.storage import Store
 
@@ -75,9 +75,9 @@ class MetronomeCoordinator:
     @callback
     def claim(self, token):
         if token not in self.clients:
-            raise HomeAssistantError("Open the metronome card on this device first")
+            raise ServiceValidationError("Open the metronome card on this device first")
         if self.owner is not None and self.owner != token and self.model.state != "idle":
-            raise HomeAssistantError(
+            raise ServiceValidationError(
                 "Another device is playing. Stop the session before selecting this device"
             )
         self.owner = token
@@ -87,7 +87,7 @@ class MetronomeCoordinator:
     @callback
     def heartbeat(self, token):
         if token not in self.clients:
-            raise HomeAssistantError("Metronome subscription expired; reopen the card")
+            raise ServiceValidationError("Metronome subscription expired; reopen the card")
         self.clients[token]["seen"] = monotonic()
 
     @callback
@@ -101,7 +101,7 @@ class MetronomeCoordinator:
         try:
             self.model.configure(changes, time())
         except (ValueError, TypeError) as err:
-            raise HomeAssistantError(str(err)) from err
+            raise ServiceValidationError(str(err)) from err
         self._store.async_delay_save(lambda: dict(self.model.settings), 1)
         self._notify()
 
@@ -128,7 +128,7 @@ class MetronomeCoordinator:
             else:
                 raise ValueError("Unknown action")
         except ValueError as err:
-            raise HomeAssistantError(str(err)) from err
+            raise ServiceValidationError(str(err)) from err
         self._notify(event)
 
     @callback
