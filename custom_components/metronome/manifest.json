@@ -1,11 +1,13 @@
 {
   "domain": "metronome",
   "name": "Metronome",
-  "version": "0.1.0-alpha.1",
+  "codeowners": ["@ak111pro"],
   "config_flow": true,
+  "dependencies": ["http", "websocket_api"],
+  "documentation": "https://github.com/ak111pro/ha-metronome",
   "integration_type": "service",
   "iot_class": "local_push",
-  "dependencies": ["http", "websocket_api"],
+  "issue_tracker": "https://github.com/ak111pro/ha-metronome/issues",
   "requirements": [],
-  "codeowners": []
+  "version": "0.1.0-alpha.1"
 }

@@ -1,0 +1,47 @@
+name: Tests
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  pytest:
+    name: pytest
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.14"
+      - name: Install test dependencies
+        run: pip install -r requirements_test.txt
+      - name: Run tests
+        run: pytest -q
+      - name: Pure model checks
+        run: python checks/check_model.py
+
+  ruff:
+    name: ruff
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.14"
+      - run: pip install ruff==0.16.10
+      - run: ruff check custom_components tests checks
+      - run: ruff format --check custom_components tests checks
+
+  frontend:
+    name: frontend
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: "20"
+      - name: Syntax check of the served modules
+        run: for f in custom_components/metronome/frontend/*.js; do node --check "$f"; done
+      - name: Frontend helper checks
+        run: node checks/check_frontend.mjs
