@@ -241,26 +241,51 @@ export class MetronomeCard extends HTMLElement {
   bindDial(selector, inverted) {
     const dial = this.$(selector);
     if (!dial) return;
+    // Only the arc's stroke hit area starts a drag. touch-action:none (path and its svg)
+    // stops the browser from turning the gesture into a page scroll; a touch that starts
+    // anywhere else in the dial still scrolls normally.
     const path = dial.querySelector(".hit");
+    let dragging = null;
     const move = event => {
-      if (!path.hasPointerCapture(event.pointerId)) return;
+      if (dragging !== event.pointerId) return;
+      event.preventDefault();
       const rect = dial.querySelector("svg").getBoundingClientRect();
       const fraction = dialFraction(event.clientX-rect.left-rect.width/2,event.clientY-rect.top-rect.height/2,inverted);
       const value = Math.round(inverted ? 5 + fraction*115 : 1 + fraction*199);
       this.draw(dial, fraction, inverted);
-      if (!inverted) dial.querySelector(".bpm").value = value;
+      if (!inverted) this.previewBpm(value);
       this.patch({[inverted ? "duration" : "bpm"]: value}, true);
+    };
+    const end = event => {
+      if (dragging !== event.pointerId) return;
+      if (event.type === "pointerup") move(event);
+      dragging = null;
+      dial.classList.remove("dragging");
+      if (path.hasPointerCapture?.(event.pointerId)) path.releasePointerCapture(event.pointerId);
+      this.flushPatch();
     };
     path.addEventListener("pointerdown", event => {
       const s = this.player?.state;
       if (!s || (inverted && (s.state !== "idle" || s.settings.duration < 5 || s.settings.duration > 120))) return;
-      event.preventDefault(); path.setPointerCapture(event.pointerId); move(event);
+      event.preventDefault();
+      dragging = event.pointerId;
+      dial.classList.add("dragging");
+      try { path.setPointerCapture(event.pointerId); } catch (_) { /* pointer already gone */ }
+      move(event);
     });
     path.addEventListener("pointermove", move);
-    path.addEventListener("pointerup", event => {
-      if (path.hasPointerCapture(event.pointerId)) { move(event); path.releasePointerCapture(event.pointerId); this.flushPatch(); }
-    });
-    path.addEventListener("pointercancel", () => this.flushPatch());
+    path.addEventListener("pointerup", end);
+    path.addEventListener("pointercancel", end);
+    path.addEventListener("lostpointercapture", end);
+    // Older WebKit ignores touch-action on SVG shapes: cancel the touch scroll explicitly.
+    const stopTouch = event => { if (event.cancelable) event.preventDefault(); };
+    path.addEventListener("touchstart", stopTouch, {passive: false});
+    path.addEventListener("touchmove", stopTouch, {passive: false});
+  }
+  // Not "preview": HA sets a boolean `preview` property on every card element.
+  previewBpm(bpm) {
+    const input = this.$(".bpm");
+    if (input && this.shadowRoot.activeElement !== input) input.value = bpm;
   }
   draw(dial, fraction, inverted = false) {
     const start = inverted ? 225 : 135, direction = inverted ? -1 : 1;
@@ -299,11 +324,11 @@ export class MetronomeCard extends HTMLElement {
     } else {
       this.$(".device").textContent = state.is_owner ? "This device" : state.output_ready ? "Another device selected" : "Current device";
       this.$(".status").textContent = status;
-      if (this.shadowRoot.activeElement !== this.$(".bpm")) this.$(".bpm").value = s.bpm;
+      if (this.shadowRoot.activeElement !== this.$(".bpm") && !this.$(".bpm-dial").classList.contains("dragging")) this.$(".bpm").value = s.bpm;
       this.$(".bpm-range").value = s.bpm;
       this.$(".bpm-range").setAttribute("aria-valuetext",`${s.bpm} ${s.signature === "6/8" ? "dotted-quarter" : "quarter-note"} beats per minute`);
       this.$(".metadata").textContent = meta;
-      this.draw(this.$(".bpm-dial"),(s.bpm-1)/199);
+      if (!this.$(".bpm-dial").classList.contains("dragging")) this.draw(this.$(".bpm-dial"),(s.bpm-1)/199);
       const dots = this.$(".dots");
       if (dots.children.length !== METERS[s.signature]) dots.innerHTML = "<span></span>".repeat(METERS[s.signature]);
       this.$(".footer").hidden = !this.config.show_advanced;
@@ -370,7 +395,7 @@ export class MetronomeCard extends HTMLElement {
     }
     const dial = this.$(".timer-dial"), outside = !locked && (s.duration < 5 || s.duration > 120);
     dial.classList.toggle("outside",outside); dial.classList.toggle("locked",locked);
-    this.draw(dial,locked ? rem/s.duration : finished ? 0 : (s.duration-5)/115,true);
+    if (!dial.classList.contains("dragging")) this.draw(dial,locked ? rem/s.duration : finished ? 0 : (s.duration-5)/115,true);
     const range = this.$(".timer-range");
     range.disabled = locked || outside; range.hidden = locked; range.value = clamp(s.duration,5,120);
     const progress = this.$(".progress");
