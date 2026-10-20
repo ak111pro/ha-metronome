@@ -56,7 +56,13 @@ export class MetronomeCard extends HTMLElement {
   }
   get hass() { return this._hass; }
   getCardSize() { return this.config?.layout === "compact" ? 3 : this.player?.state?.settings.timer_enabled ? 12 : 7; }
-  getGridOptions() { return {columns: 12, rows: "auto", min_columns: 6}; }
+  // Sections: the full card needs the whole section width (both dials, 228 px transport
+  // row plus insets); the compact card fits from three quarters of a section.
+  getGridOptions() {
+    return this.config?.layout === "compact"
+      ? {columns: 12, rows: "auto", min_columns: 9}
+      : {columns: 12, rows: "auto", min_columns: 12};
+  }
   connectedCallback() {
     this.connect();
     clearInterval(this.tick);
