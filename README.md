@@ -117,3 +117,7 @@ ruff check custom_components tests checks && ruff format --check custom_componen
 ```
 
 The two small checks cover pure countdown/state transitions and frontend math. `tests/` runs the integration inside Home Assistant (config flow, lifecycle, entities, countdown with frozen time, websocket ownership and permissions). None of them measure audio accuracy or Companion behavior. Read [TESTING.md](docs/TESTING.md) before promoting this alpha. Licensed under the MIT licence (see [LICENSE](LICENSE)).
+
+## Credits
+
+The brand icon (`custom_components/metronome/brand/`, source `docs/brand/icon.svg`) draws the `mdi:metronome` glyph from [Material Design Icons](https://pictogrammers.com/library/mdi/) by Pictogrammers (`@mdi/svg`), licensed under the [Apache License 2.0](https://github.com/Templarian/MaterialDesign-SVG/blob/master/LICENSE), in white on a rounded teal tile.
