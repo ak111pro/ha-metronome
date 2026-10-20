@@ -17,7 +17,7 @@ export const beatPosition = (state, now) => state.anchor_beat +
   (state.state === "playing" ? (now - state.anchor_at) * state.settings.bpm / 60 : 0);
 export function remaining(state, now) {
   return state.state === "playing" && state.ends_at != null
-    ? clamp(state.ends_at - now, 0, state.settings.duration) : state.remaining;
+    ? clamp(state.ends_at - now, 0, state.remaining) : state.remaining;
 }
 export function splitTime(seconds) {
   const s = Math.ceil(Math.max(0, seconds));

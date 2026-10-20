@@ -63,8 +63,10 @@ class Session:
         return self.anchor_beat
 
     def remaining_at(self, now):
+        # While playing, self.remaining is the time left at the last (re)start. It caps
+        # the value during the start lead and count-in, when ends_at - now is larger.
         if self.state == "playing" and self.ends_at is not None:
-            return max(0.0, min(self.settings["duration"], self.ends_at - now))
+            return max(0.0, min(self.remaining, self.ends_at - now))
         return self.remaining
 
     def _event(self, name):

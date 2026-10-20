@@ -11,7 +11,9 @@ for (const inverted of [false,true]) {
 }
 assert.equal(timeText(359999),"99:59:59");
 assert.equal(timeText(0.01),"00:00:01");
-assert.equal(remaining({state:"playing",ends_at:100,settings:{duration:30}},60),30);
-assert.equal(remaining({state:"playing",ends_at:100,settings:{duration:30}},101),0);
+assert.equal(remaining({state:"playing",ends_at:100,remaining:30,settings:{duration:30}},60),30);
+assert.equal(remaining({state:"playing",ends_at:100,remaining:30,settings:{duration:30}},101),0);
+// Resumed with 20 s left: the 200 ms start lead must not show as extra time.
+assert.equal(remaining({state:"playing",ends_at:100.2,remaining:20,settings:{duration:30}},80.1),20);
 assert.equal(escapeHTML('<img src="x">'),"&lt;img src=&quot;x&quot;&gt;");
 console.log("Frontend helper checks passed");

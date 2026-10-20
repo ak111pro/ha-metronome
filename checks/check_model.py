@@ -41,6 +41,15 @@ class ModelChecks(unittest.TestCase):
         self.assertEqual(s.start(100), "resumed")
         self.assertAlmostEqual(s.ends_at, 120.2)
 
+    def test_pause_inside_start_lead_adds_no_time(self):
+        s = Session({"timer_enabled": True, "duration": 30})
+        s.start(0)
+        s.pause(10.2)
+        for t in (20, 30, 40):
+            s.start(t)
+            s.pause(t + 0.1)
+        self.assertAlmostEqual(s.remaining, 20)
+
     def test_pause_during_count_in(self):
         s = Session({"timer_enabled": True, "count_in": 1, "duration": 30})
         s.start(0)
