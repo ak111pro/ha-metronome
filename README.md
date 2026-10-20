@@ -68,7 +68,7 @@ Pause is available only when the timer is enabled. It preserves the remaining ti
 | `show_tempo` | `true` | Show the tempo marking |
 | `show_signature` | `true` | Show the meter below BPM |
 | `show_timer` | `true` | Show timer controls and countdown |
-| `show_advanced` | `true` | Show the Advanced entry point |
+| `show_advanced` | `true` | Show the Advanced button (fifth button of the transport row) |
 | `feedback` | `dots_glow` | `dots`, `dots_glow`, `off` |
 | `timer_display` | `remaining_finish` | `remaining`, `remaining_finish` |
 

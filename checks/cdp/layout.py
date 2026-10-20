@@ -1,7 +1,9 @@
 """Screenshots and layout measurements of the Advanced view (and main view) per width/theme.
 
 python layout.py <out-dir> [label]   e.g. label=before / after
-Checks: one control height, single-line labels, nothing wider than the card.
+Checks: transport row = five 48 x 48 buttons (Start, Stop, Pause, Timer, Advanced) on one
+line inside the card; Advanced: one control height, single-line labels, nothing wider than
+the card.
 """
 
 import base64
@@ -24,10 +26,13 @@ MEASURE = f"""(() => {{
   const overflow = [...r.querySelectorAll('*')].filter(e => e.offsetParent && (
       e.getBoundingClientRect().right > card.right + 0.5 ||
       e.getBoundingClientRect().left < card.left - 0.5)).map(e => e.className || e.localName);
-  const adv = r.querySelector('.footer .advanced');
-  return {{triggers: h('.advanced-view .select-trigger'), tiles: h('.advanced-view .tile'),
+  const row = [...r.querySelectorAll('.main .transport button')].filter(e => e.offsetParent)
+    .map(e => e.getBoundingClientRect());
+  return {{transport: {{count: row.length,
+      sizes: [...new Set(row.map(b => `${{Math.round(b.width)}}x${{Math.round(b.height)}}`))],
+      rows: new Set(row.map(b => Math.round(b.top))).size,
+      inside: row.every(b => b.left >= card.left && b.right <= card.right)}},triggers: h('.advanced-view .select-trigger'), tiles: h('.advanced-view .tile'),
     volume: h('.volume-wrap'), wrapped, truncated, overflow: [...new Set(overflow)].slice(0, 8),
-    advancedButton: adv ? Math.round(adv.getBoundingClientRect().width) : null,
     card: Math.round(card.width)}};
 }})()"""
 
@@ -52,10 +57,11 @@ async def main():
         cdp = await open_page(session, 360, 1400)
         for theme in ("light", "dark"):
             await login(cdp, theme=theme, wait=15)
-            for width in (280, 320, 360, 440):
+            # Card widths; the Sections view adds 8 px on each side (264 = a 280 px phone).
+            for width in (264, 280, 320, 360, 440, 500):
                 await cdp.call(
                     "Emulation.setDeviceMetricsOverride",
-                    width=width,
+                    width=width + 16,
                     height=1400,
                     deviceScaleFactor=2 if width == 360 else 1,
                     mobile=True,
@@ -63,6 +69,9 @@ async def main():
                 await cdp.idle(1.5)
                 await cdp.js("window.scrollTo(0, 0); 1")
                 main_view = await cdp.js(MEASURE)
+                t = main_view["transport"]
+                if t["count"] != 5 or t["sizes"] != ["48x48"] or t["rows"] != 1 or not t["inside"]:
+                    bad.append((theme, width, "transport", t))
                 if width == 360:
                     await card_shot(cdp, f"{out}/{label}-main-{theme}-{width}.png")
                 await cdp.js(
@@ -71,7 +80,7 @@ async def main():
                 )
                 await cdp.idle(0.8)
                 m = await cdp.js(MEASURE)
-                print(theme, width, "advanced button", main_view["advancedButton"], m)
+                print(theme, width, "transport", main_view["transport"], m)
                 if width in (320, 360):
                     await card_shot(cdp, f"{out}/{label}-advanced-{theme}-{width}.png")
                 heights = set(m["triggers"] + m["tiles"])

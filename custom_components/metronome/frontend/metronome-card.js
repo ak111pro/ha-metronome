@@ -19,7 +19,9 @@ function picker(key) {
 function tile(key, label, glyph) {
   return `<button type="button" class="tile" data-toggle="${key}" aria-pressed="false">${icon(glyph)}<span>${label}</span><small>Off</small></button>`;
 }
-const transport = () => `<div class="transport" role="group" aria-label="Playback and timer">${button("start","Start","play")}${button("stop","Stop","stop")}${button("pause","Pause","pause")}${button("timer","Timer","timer-outline")}</div>`;
+// Full card: Advanced is the fifth square button. The compact card keeps four; its expand
+// control opens the full view (with Advanced) instead of swapping the small card in place.
+const transport = (advanced = false) => `<div class="transport" role="group" aria-label="Playback and timer">${button("start","Start","play")}${button("stop","Stop","stop")}${button("pause","Pause","pause")}${button("timer","Timer","timer-outline")}${advanced ? button("advanced","Advanced","tune") : ""}</div>`;
 
 export class MetronomeCard extends HTMLElement {
   static async getConfigElement() {
@@ -105,14 +107,13 @@ export class MetronomeCard extends HTMLElement {
           <div class="center"><div class="status" role="status">Idle</div><input class="bpm" type="number" min="1" max="200" step="1" inputmode="numeric" aria-label="Beats per minute"><div class="metadata"></div>
           <button type="button" class="tap" data-action="tap" aria-label="Tap tempo"><span class="tap-text">Tap</span><span class="dots" aria-hidden="true"></span></button></div>
           ${button("minus","Decrease by 1 BPM","minus","round minus")}${button("plus","Increase by 1 BPM","plus","round plus")}
-        </div>${transport()}
+        </div>${transport(true)}
         <div class="timer-panel" inert><div class="timer-inner"><div class="dial timer-dial">${svg()}
           <input class="sr timer-range" type="range" min="5" max="120" step="1" aria-label="Timer dial">
           <span class="sr progress" role="progressbar" aria-label="Time remaining" aria-valuemin="0" hidden></span>
           <div class="timer-adjust">${button("time-minus","Decrease seconds","minus","round")}${button("time-plus","Increase seconds","plus","round")}</div>
           <div class="timer-center"><div class="timer-label">Timer</div><div class="fields">${["Hours","Minutes","Seconds"].map((label,i) => `${i ? '<span class="colon" aria-hidden="true">:</span>' : ''}<label><input type="number" data-field="${i}" aria-label="${label}" min="0" max="${i ? 59 : 99}" inputmode="numeric"><span>${label}</span></label>`).join("")}</div><div class="timer-hint"></div></div>
-        </div></div></div>
-        <footer class="footer"><button type="button" class="select-trigger advanced" data-action="advanced">${icon("tune")}<span class="select-content"><span class="select-value">Advanced</span></span>${icon("chevron-right")}</button></footer>`}
+        </div></div></div>`}
       </section>
       <section class="advanced-view" aria-label="Advanced settings" hidden>
         <header class="subheader">${button("back","Back to metronome","chevron-left","back")}<div><div class="breadcrumb"></div><div class="name">Advanced</div></div></header>
@@ -371,7 +372,7 @@ export class MetronomeCard extends HTMLElement {
       if (this.dragBpm == null) this.draw(this.$(".bpm-dial"),((shown ?? s.bpm)-1)/199);
       const dots = this.$(".dots");
       if (dots.children.length !== METERS[s.signature]) dots.innerHTML = "<span></span>".repeat(METERS[s.signature]);
-      this.$(".footer").hidden = !this.config.show_advanced;
+      this.$('[data-action="advanced"]').hidden = !this.config.show_advanced;
       const panel = this.$(".timer-panel"), open = s.timer_enabled && this.config.show_timer;
       panel.classList.toggle("open",open); panel.inert = !open;
     }
