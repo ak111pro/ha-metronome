@@ -57,11 +57,23 @@ class MetronomeCoordinator:
         self.listeners.add(listener)
         return lambda: self.listeners.discard(listener)
 
+    @property
+    def output_user(self):
+        """Display name of the HA user whose page holds the output (None if nobody does).
+
+        Only the name: the card shows "Another device (name)". Tokens are
+        (websocket connection, subscription id)."""
+        if self.owner is None:
+            return None
+        user = getattr(self.owner[0], "user", None)
+        return getattr(user, "name", None) or None
+
     @callback
     def snapshot(self, client=None):
         return self.model.snapshot(time()) | {
             "name": self.entry.title,
             "output_ready": self.owner is not None,
+            "output_user": self.output_user,
             "is_owner": client is not None and client == self.owner,
             "instance_id": self.instance_id,
             "sequence": self.sequence,

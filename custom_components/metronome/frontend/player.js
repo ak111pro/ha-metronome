@@ -129,7 +129,9 @@ class Player extends EventTarget {
     }
   }
 
-  async start() {
+  /* Select this page as the output without starting: Start does the same first. Both run
+   * inside the tap (user gesture), which is what lets the browser enable audio. */
+  async claim() {
     // resume() is invoked directly during the click gesture, before network waits.
     const Audio = window.AudioContext || window.webkitAudioContext;
     if (!Audio) throw new Error("Audio is unavailable in this browser");
@@ -150,11 +152,15 @@ class Player extends EventTarget {
     this.error = "";
     try {
       await this.send("claim");
-      await this.send("start");
     } catch (error) {
       if (!this.state?.is_owner) this.readyForAudio = false;
       throw error;
     }
+  }
+
+  async start() {
+    await this.claim();
+    await this.send("start");
   }
 
   async action(action, settings) {

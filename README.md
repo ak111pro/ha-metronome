@@ -44,6 +44,15 @@ There is no separate audio dependency, Node build step or software to install on
 
 **“Current device” means the browser/WebView where Start is tapped in this custom card.** It is not a speaker entity and is not automatically the device that happens to call `media_player.media_play`.
 
+**Advanced → Output** shows where the sound comes from: *This device* (this page plays),
+*Another device (name)* (another page holds the output; the name is the HA user logged in
+there, sent by the integration as `output_user` to the card only, not as an entity
+attribute), or *No device selected*. **Play on this device** selects this page without
+starting, with the same rule as Start: only while the session is idle (stop it first to move
+playback). There is no speaker picker; output is always a page's own audio. The card title
+has no device line; the compact card adds "on another device" to its state while a session
+plays elsewhere.
+
 After that gesture, native HA controls and automations can control that selected, connected client. They cannot unlock audio in a fresh browser, choose a remote phone implicitly, or start a closed Companion app. The selected client remains ready after Stop while its page stays visible. Opening the card elsewhere does not duplicate sound. To move output while a session is active or paused, stop it first, then tap Start on the other device.
 
 Leaving the app, locking the screen, losing the connection or suspending its audio interrupts playback. There is no background-playback guarantee and no automatic resumption of a session. A heartbeat lease provides a server-side fallback if a client vanishes. Navigation between dashboard views, the compact card's dialog, HA more-info dialogs and other HA pages (for example the device page) within the same HA page keep the engine and the selection alive.

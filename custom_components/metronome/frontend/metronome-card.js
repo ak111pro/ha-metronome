@@ -110,7 +110,7 @@ export class MetronomeCard extends HTMLElement {
         <div class="compact-head"><button type="button" class="compact-info" data-action="expand" aria-label="Open metronome controls"><div class="name"></div><div class="meta"></div></button>${button("expand","Open controls","arrow-expand")}</div>
         <div class="compact-adjust">${button("minus","Decrease by 1 BPM","minus","round")}<output class="compact-bpm"></output>${button("plus","Increase by 1 BPM","plus","round")}</div>
         ${transport()}<div class="compact-timer" hidden></div>` : `
-        <header class="header"><div class="name"></div><div class="device"></div></header>
+        <header class="header"><div class="name"></div></header>
         <div class="dial bpm-dial"><div class="glow" aria-hidden="true"></div>${svg()}
           <input class="sr bpm-range" type="range" min="1" max="200" step="1" aria-label="Tempo dial">
           <div class="center"><div class="status" role="status">Idle</div><input class="bpm" type="number" min="1" max="200" step="1" inputmode="numeric" aria-label="Beats per minute"><div class="metadata"></div>
@@ -128,6 +128,7 @@ export class MetronomeCard extends HTMLElement {
         <header class="subheader">${button("back","Back to metronome","chevron-left","back")}<div><div class="breadcrumb"></div><div class="name">Advanced</div></div></header>
         <div class="settings"><div class="settings-label">Rhythm</div><div class="grid">${picker("signature")}${picker("count_in")}</div><div class="note meter-note"></div>${tile("accent","Accent first beat","waveform")}
           <div class="settings-label">Sound</div><label class="volume-label" for="volume"><span>Volume</span><output></output></label><div class="volume-wrap"><div class="volume-fill" aria-hidden="true"><span class="volume-marker"></span></div><input id="volume" class="volume" type="range" min="0" max="100" step="1" aria-label="Volume"></div>${tile("muted","Mute","volume-off")}
+          <div class="settings-label">Output</div><div class="output"><div class="output-status" role="status">${icon("volume-high")}<span class="output-device"></span></div><button type="button" class="tile output-claim" data-action="claim">${icon("cellphone-arrow-down")}<span>Play on this device</span></button><div class="note output-note"></div></div>
           <div class="haptics"><div class="settings-label">Haptics</div><div class="grid">${tile("vibration","Vibration","vibrate")}${picker("pulse")}</div><div class="note haptics-note"></div></div>
         </div>
       </section><div class="message" role="status" hidden></div>
@@ -220,6 +221,7 @@ export class MetronomeCard extends HTMLElement {
     }
     if (!state) return;
     if (action === "start") return this.run(() => this.player.start());
+    if (action === "claim") return this.run(() => this.player.claim());
     if (action === "stop" || action === "pause") return this.run(() => this.player.action(action));
     if (action === "timer") return this.patch({timer_enabled: !state.settings.timer_enabled});
     if (action === "minus" || action === "plus") return this.patch({bpm: clamp(state.settings.bpm + (action === "plus" ? 1 : -1),1,200)});
@@ -367,10 +369,11 @@ export class MetronomeCard extends HTMLElement {
     const status = active ? "Active" : state.state === "paused" ? "Paused" : "Idle";
     const meta = this.meta(s);
     if (this.config.layout === "compact") {
-      this.$(".meta").textContent = `${status} · ${meta}`;
+      // The full card's Advanced view names the output; here only when it plays elsewhere.
+      const elsewhere = state.state !== "idle" && state.output_ready && !state.is_owner;
+      this.$(".meta").textContent = `${status}${elsewhere ? " on another device" : ""} · ${meta}`;
       this.$(".compact-bpm").textContent = s.bpm;
     } else {
-      this.$(".device").textContent = state.is_owner ? "This device" : state.output_ready ? "Another device selected" : "Current device";
       this.$(".status").textContent = status;
       const bpmInput = this.$(".bpm"), shown = this.shownBpm(s);
       bpmInput.defaultValue = s.bpm;
@@ -408,6 +411,16 @@ export class MetronomeCard extends HTMLElement {
       const key = el.dataset.toggle, value = key === "vibration" ? this.player.vibration : s[key];
       el.setAttribute("aria-pressed",String(value)); el.querySelector("small").textContent = value ? "On" : "Off";
     });
+    // Output: which page plays; "Play on this device" selects this page (only while idle,
+    // like Start). There is no speaker picker: output is always a page's own audio.
+    this.$(".output-device").textContent = state.is_owner ? "This device"
+      : state.output_ready ? `Another device${state.output_user ? ` (${state.output_user})` : ""}` : "No device selected";
+    const claim = this.$(".output-claim");
+    claim.hidden = state.is_owner;
+    claim.disabled = locked;
+    this.$(".output-note").textContent = state.is_owner ? "Sound comes from this phone or browser while the page stays open."
+      : locked ? "Stop the session to move playback to this device."
+      : "Tap to enable sound here. Start does the same.";
     const haptics = hapticMode();
     this.$(".haptics").hidden = !haptics;
     this.$(".haptics-note").textContent = haptics === "companion"

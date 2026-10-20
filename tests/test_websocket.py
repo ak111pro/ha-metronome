@@ -28,6 +28,7 @@ async def test_subscribe_sends_snapshot(hass: HomeAssistant, loaded, ws_factory)
     assert snapshot["state"] == "idle"
     assert snapshot["settings"]["bpm"] == 120
     assert snapshot["output_ready"] is False
+    assert snapshot["output_user"] is None
     assert snapshot["is_owner"] is False
     assert {"instance_id", "sequence", "server_time", "revision", "session_id"} <= set(snapshot)
 
@@ -268,6 +269,34 @@ async def test_ordinary_user_can_play(
     assert (await ws.ok("claim", sub))["is_owner"] is True
     assert (await ws.ok("start", sub))["state"] == "playing"
     assert (await ws.ok("stop", sub))["state"] == "idle"
+
+
+async def test_output_user_names_the_owner(
+    hass: HomeAssistant, loaded, ws_factory, hass_user_access_token, hass_admin_user
+) -> None:
+    """Other pages see whose page holds the output; it clears on release/disconnect."""
+    admin = await ws_factory()
+    ordinary = await ws_factory(hass_user_access_token)
+    sub_a, _ = await admin.subscribe()
+    await ordinary.send(type="ping")
+    sub_o, _ = await ordinary.subscribe()
+
+    claimed = await ordinary.ok("claim", sub_o)
+    assert claimed["is_owner"] is True
+    assert claimed["output_user"] == "Ordinary"
+    seen = (await admin.drain(sub_a))[-1]
+    assert seen["output_ready"] is True
+    assert seen["is_owner"] is False
+    assert seen["output_user"] == "Ordinary"
+    # Not exposed as an entity attribute (it is a per-page detail for the card).
+    assert "output_user" not in hass.states.get(PLAYER).attributes
+
+    # Hand-off while idle: the admin's page takes over.
+    moved = await admin.ok("claim", sub_a)
+    assert moved["output_user"] == hass_admin_user.name
+    released = await admin.ok("release", sub_a)
+    assert released["output_ready"] is False
+    assert released["output_user"] is None
 
 
 async def test_two_instances_have_separate_owners(hass: HomeAssistant, loaded, ws_factory) -> None:
