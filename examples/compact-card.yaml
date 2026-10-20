@@ -1,0 +1,4 @@
+type: custom:metronome-card
+entity: media_player.metronome
+layout: compact
+# Tap the name/expand icon to open full controls. Audio is shared with the dialog.

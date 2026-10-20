@@ -1,0 +1,9 @@
+type: custom:metronome-card
+entity: media_player.metronome
+layout: full
+show_tempo: true
+show_signature: true
+show_timer: true
+show_advanced: true
+feedback: dots_glow
+timer_display: remaining_finish

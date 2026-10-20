@@ -1,0 +1,11 @@
+{
+  "title": "Metronome",
+  "config": {
+    "step": {"user": {
+      "title": "Create a metronome",
+      "description": "Audio plays on the foreground device where you tap Start in the metronome card. Add the supplied dashboard resource after setup.",
+      "data": {"name": "Name"}
+    }},
+    "error": {"name_required": "Enter a name"}
+  }
+}

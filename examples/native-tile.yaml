@@ -1,0 +1,17 @@
+# A foreground audio client must first be enabled from the custom card.
+# This remains HA's native Tile and opens standard media-player more-info.
+type: tile
+entity: media_player.metronome
+name: Metronome
+icon: mdi:metronome
+state_content:
+  - state
+  - bpm
+  - signature
+features:
+  - type: media-player-playback
+    controls:
+      - media_play
+      - media_stop
+      - media_pause
+      - volume_mute

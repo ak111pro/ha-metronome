@@ -1,0 +1,104 @@
+# Home Assistant Metronome
+
+**0.1.0-alpha.1 · initial implementation for review and device testing**
+
+A custom integration and dashboard card that play a metronome on the foreground phone or browser. Target environment: Home Assistant Core **2026.10.1**, Docker on a Raspberry Pi 4 (8 GB), with Android and iOS Companion apps.
+
+This package contains implementation source, installation examples, limited local checks and an [Opus handoff](docs/HANDOFF.md). It has **not been installed in Home Assistant or tested on either Companion app**. It is not yet a verified public release or a HACS package. No repository was created and no running HA installation was changed.
+
+## What is included
+
+- Named integration instances with a media player, tempo/duration numbers, meter/count-in selects, timer/accent switches, session events and expected-finish timestamp.
+- Full and compact cards, visual configuration editor, and an expanded dialog from the compact card.
+- Tempo 1–200 BPM, ±1 buttons, tap tempo, tempo markings, beat dots and optional diffuse glow.
+- 2/4, 3/4, 4/4 and 6/8. In 6/8, BPM counts **two dotted-quarter beats per bar**. Subdivisions are not part of this version.
+- Optional countdown, 5–120-second dial, separate hours/minutes/seconds fields up to 99:59:59, pause/resume, actual expected finish time, count-in and completion sound.
+- Volume, mute, accent and capability-dependent vibration. Haptic pulse length is available; vibration intensity is not exposed.
+- Web Audio scheduling on the selected foreground device. The Pi manages state and settings; it does not synthesize or stream the beats.
+
+## Install for testing
+
+1. Copy the entire `custom_components/metronome` directory into the Home Assistant configuration volume, at `/config/custom_components/metronome` **inside the container**. Use the host directory that is already bind-mounted to `/config`; do not assume the host path is also `/config`.
+2. Restart Home Assistant, then add **Metronome** under **Settings → Devices & services → Add integration**. Give the instance a name. Multiple instances are supported.
+3. Add a dashboard resource of type **JavaScript module** with this URL:
+
+   ```text
+   /metronome/metronome-card.js?v=0.1.0-alpha.1
+   ```
+
+   Dashboard resources may require Advanced Mode in the user profile. For YAML-managed resources, use `examples/resource.yaml` in the existing Lovelace resources configuration. Do not create a second conflicting Lovelace configuration.
+
+4. Add a **Metronome** card using the visual card picker, or paste:
+
+   ```yaml
+   type: custom:metronome-card
+   entity: media_player.metronome
+   ```
+
+   Replace the entity ID with the media player created by your instance. HA chooses the actual ID from the device name and existing entities.
+5. On the phone/browser that should play sound, open the card and tap **Start**. This user gesture enables local audio and selects that client as output. Keep the app visible.
+
+There is no separate audio dependency, Node build step or software to install on the Raspberry Pi. The JS modules are bundled inside the integration and served by HA. Refresh the frontend after replacing files or reloading the integration.
+
+## Playback and device selection
+
+**“Current device” means the browser/WebView where Start is tapped in this custom card.** It is not a speaker entity and is not automatically the device that happens to call `media_player.media_play`.
+
+After that gesture, native HA controls and automations can control that selected, connected client. They cannot unlock audio in a fresh browser, choose a remote phone implicitly, or start a closed Companion app. The selected client remains ready after Stop while its page stays visible. Opening the card elsewhere does not duplicate sound. To move output while a session is active or paused, stop it first, then tap Start on the other device.
+
+Leaving the app, locking the screen, losing the connection or suspending its audio interrupts playback. There is no background-playback guarantee and no automatic resumption. A heartbeat lease provides a server-side fallback if a client vanishes. Navigation between dashboard views within the same visible HA page keeps the engine alive.
+
+## Timer behavior
+
+The timer begins **after** count-in. Its dial edits 5–120 seconds; the fields accept 1 second through 99:59:59. A value outside the dial range greys out only the editing dial. During playback, the arc becomes a remaining-time indicator for any duration and its handle and fields are locked.
+
+Pause is available only when the timer is enabled. It preserves the remaining time and beat phase; Start resumes it and recalculates the expected finish time. Stop resets the session to the configured duration. A natural finish plays a short chime unless muted. An interruption never plays the completion chime.
+
+`Ends …` is an actual clock time in the viewing client's local timezone, using HA's selected 12/24-hour preference. A date is added when it ends on a different day. The timestamp sensor stores the corresponding UTC instant for HA to display. Tempo can change live without extending an already-running countdown. Changing count-in tempo changes when the exercise begins, so it also changes its expected finish.
+
+## Card options
+
+| Option | Default | Values / meaning |
+| --- | --- | --- |
+| `entity` | required | The integration's `media_player` entity |
+| `name` | entity name | Optional display name |
+| `layout` | `full` | `full`, `compact` |
+| `show_tempo` | `true` | Show the tempo marking |
+| `show_signature` | `true` | Show the meter below BPM |
+| `show_timer` | `true` | Show timer controls and countdown |
+| `show_advanced` | `true` | Show the Advanced entry point |
+| `feedback` | `dots_glow` | `dots`, `dots_glow`, `off` |
+| `timer_display` | `remaining_finish` | `remaining`, `remaining_finish` |
+
+Visibility settings hide controls; they do not change the shared session. A hidden timer can still be enabled by another card or automation. Tempo, duration, count-in, meter, accent, volume and mute belong to the integration instance, not the card configuration. Vibration preferences are local to the current page and reset on reload.
+
+The card uses `ha-card`, `ha-icon`, HA theme tokens, 48px primary controls and semantic keyboard-accessible inputs. Its thermostat-like dials, menus and expanded dialog are custom controls. It is visually aligned with HA; it is **not an upstream HA card or a guarantee that every control is HA's own internal component**. Native-theme and accessibility checks remain part of the handoff.
+
+## Entities and automations
+
+| Entity | Purpose |
+| --- | --- |
+| `media_player.<name>` | Play, pause, stop, volume and mute; exposes BPM and meter attributes |
+| `number.<name>_tempo` | 1–200 BPM |
+| `number.<name>_timer_duration` | Configured seconds, 1–359999 |
+| `select.<name>_time_signature` | 2/4, 3/4, 4/4, 6/8 |
+| `select.<name>_count_in` | Off, 1 bar, 2 bars |
+| `switch.<name>_timer` | Enable optional timer |
+| `switch.<name>_accent_first_beat` | Accent the first beat |
+| `event.<name>_session` | started, paused, resumed, stopped, finished, interrupted |
+| `sensor.<name>_expected_finish` | Timestamp while the timer is running; unknown otherwise |
+
+Entity IDs above are illustrative. Use the actual IDs assigned by HA. Standard domain actions are used; no custom per-beat services or events are sent. See `examples/automation.yaml` and `examples/native-tile.yaml`.
+
+The countdown has one owner in this integration. A separate HA `timer` helper is deliberately not created. Native Tile cards work with the media player and open its **standard HA media-player more-info**. The full custom controls open from the compact metronome card; this package does not replace more-info globally.
+
+## Development and validation
+
+The backend is Python using HA's APIs. Frontend modules have no build dependencies. `package.json` exists only to mark modules and expose the small helper check.
+
+```sh
+python3 checks/check_model.py
+node checks/check_frontend.mjs
+```
+
+The first checks cover pure countdown/state transitions and frontend math. They do not test HA startup, websocket permissions, actual audio accuracy or Companion behavior. Read [TESTING.md](docs/TESTING.md) before promoting this alpha. The next owner must supply real repository/documentation/issue links and codeowners, select a licence, and complete HACS metadata if publishing through HACS.

@@ -1,0 +1,11 @@
+{
+  "domain": "metronome",
+  "name": "Metronome",
+  "version": "0.1.0-alpha.1",
+  "config_flow": true,
+  "integration_type": "service",
+  "iot_class": "local_push",
+  "dependencies": ["http", "websocket_api"],
+  "requirements": [],
+  "codeowners": []
+}

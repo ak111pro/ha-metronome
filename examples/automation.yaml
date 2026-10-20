@@ -1,0 +1,24 @@
+# Example HA script. Replace IDs with the entities created by your instance.
+# A visible, audio-unlocked client must already be selected.
+alias: Start metronome practice
+sequence:
+  - action: media_player.media_stop
+    target:
+      entity_id: media_player.metronome
+  - action: number.set_value
+    target:
+      entity_id: number.metronome_tempo
+    data:
+      value: 96
+  - action: number.set_value
+    target:
+      entity_id: number.metronome_timer_duration
+    data:
+      value: 120
+  - action: switch.turn_on
+    target:
+      entity_id: switch.metronome_timer
+  - action: media_player.media_play
+    target:
+      entity_id: media_player.metronome
+mode: single
