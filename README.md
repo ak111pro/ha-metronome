@@ -104,4 +104,4 @@ pytest -q
 ruff check custom_components tests checks && ruff format --check custom_components tests checks
 ```
 
-The two small checks cover pure countdown/state transitions and frontend math. `tests/` runs the integration inside Home Assistant (config flow, lifecycle, entities, countdown with frozen time, websocket ownership and permissions). None of them measure audio accuracy or Companion behavior. Read [TESTING.md](docs/TESTING.md) before promoting this alpha. A licence has not been chosen yet.
+The two small checks cover pure countdown/state transitions and frontend math. `tests/` runs the integration inside Home Assistant (config flow, lifecycle, entities, countdown with frozen time, websocket ownership and permissions). None of them measure audio accuracy or Companion behavior. Read [TESTING.md](docs/TESTING.md) before promoting this alpha. Licensed under the MIT licence (see [LICENSE](LICENSE)).
