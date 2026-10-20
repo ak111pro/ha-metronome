@@ -1,7 +1,7 @@
-import {getPlayer} from "./player.js?v=0.1.0-alpha.3";
-import {styles} from "./styles.js?v=0.1.0-alpha.3";
+import {getPlayer} from "./player.js?v=0.1.0-alpha.4";
+import {styles} from "./styles.js?v=0.1.0-alpha.4";
 import {DEFAULT_CONFIG, COLOR_KEYS, METERS, escapeHTML as esc, clamp, tempo, remaining, splitTime,
-  timeText, arc, point, dialFraction, beatPosition, hapticMode, validColor} from "./shared.js?v=0.1.0-alpha.3";
+  timeText, arc, point, dialFraction, beatPosition, hapticMode, validColor} from "./shared.js?v=0.1.0-alpha.4";
 
 const icon = name => `<ha-icon icon="mdi:${name}" aria-hidden="true"></ha-icon>`;
 const button = (action, label, glyph, cls = "control") =>
@@ -25,7 +25,7 @@ const transport = (advanced = false) => `<div class="transport" role="group" ari
 
 export class MetronomeCard extends HTMLElement {
   static async getConfigElement() {
-    await import("./editor.js?v=0.1.0-alpha.3");
+    await import("./editor.js?v=0.1.0-alpha.4");
     return document.createElement("metronome-card-editor");
   }
   static getStubConfig(hass) {
@@ -107,10 +107,10 @@ export class MetronomeCard extends HTMLElement {
     this.shadowRoot.innerHTML = `<style>${styles}</style><ha-card class="idle">
       <section class="main" aria-label="Metronome">
       ${this.config.layout === "compact" ? `
-        <div class="compact-head"><button type="button" class="compact-info" data-action="expand" aria-label="Open metronome controls"><div class="name"></div><div class="meta"></div></button>${button("expand","Open controls","arrow-expand")}</div>
+        <div class="compact-head"><button type="button" class="compact-info" data-action="expand" aria-label="Open metronome controls"><div class="name"${this.config.show_title ? "" : " hidden"}></div><div class="meta"></div></button>${button("expand","Open controls","arrow-expand")}</div>
         <div class="compact-adjust">${button("minus","Decrease by 1 BPM","minus","round")}<output class="compact-bpm"></output>${button("plus","Increase by 1 BPM","plus","round")}</div>
         ${transport()}<div class="compact-timer" hidden></div>` : `
-        <header class="header"><div class="name"></div></header>
+        <header class="header"${this.config.show_title ? "" : " hidden"}><div class="name"></div></header>
         <div class="dial bpm-dial"><div class="glow" aria-hidden="true"></div>${svg()}
           <input class="sr bpm-range" type="range" min="1" max="200" step="1" aria-label="Tempo dial">
           <div class="center"><div class="status" role="status">Idle</div><input class="bpm" type="number" min="1" max="200" step="1" inputmode="numeric" aria-label="Beats per minute"><div class="metadata"></div>
@@ -448,9 +448,10 @@ export class MetronomeCard extends HTMLElement {
     const at = this.player.state.ends_at;
     if (at == null || this.config.timer_display !== "remaining_finish") return "";
     const locale = this._hass.locale || {}, date = new Date(at*1000), now = new Date();
+    // 24-hour clock unless the HA profile explicitly asks for 12-hour (owner's choice: the
+    // "language" default would give AM/PM for English).
     const format = {hour:"2-digit",minute:"2-digit",second:"2-digit"};
-    if (locale.time_format === "24") format.hour12 = false;
-    if (locale.time_format === "12") format.hour12 = true;
+    if (locale.time_format === "12") format.hour12 = true; else format.hourCycle = "h23";
     if (now.toDateString() !== date.toDateString()) Object.assign(format,{month:"short",day:"numeric"});
     return `Ends ${new Intl.DateTimeFormat(locale.language || undefined,format).format(date)}`;
   }
@@ -520,7 +521,7 @@ export class MetronomeCard extends HTMLElement {
       dialog.setAttribute("aria-label",this.config.name || "Metronome controls");
       dialog.innerHTML = `<div class="close-row">${button("close","Close","close","close")}</div>`;
       const card = document.createElement("metronome-card");
-      card.setConfig({...this.config,layout:"full"}); card.hass = this._hass;
+      card.setConfig({...this.config,layout:"full",show_title:true}); card.hass = this._hass;
       dialog.append(card); this.shadowRoot.append(dialog);
       dialog.querySelector("button").addEventListener("click",() => dialog.close());
       dialog.addEventListener("click",event => { if (event.target === dialog) dialog.close(); });

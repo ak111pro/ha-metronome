@@ -2,7 +2,7 @@
  * selector elements); a plain-control fallback is used only if ha-form never appears.
  * Contract: setConfig() + hass setter, and a bubbling, composed `config-changed` event with
  * the new config after every change. Only non-default options are written to YAML. */
-import {DEFAULT_CONFIG, COLOR_KEYS, cleanConfig, validColor, escapeHTML as esc} from "./shared.js?v=0.1.0-alpha.3";
+import {DEFAULT_CONFIG, COLOR_KEYS, cleanConfig, validColor, escapeHTML as esc} from "./shared.js?v=0.1.0-alpha.4";
 
 const select = options => ({select: {mode: "dropdown", options: options.map(([value, label]) => ({value, label}))}});
 const SCHEMA = [
@@ -10,6 +10,7 @@ const SCHEMA = [
   {name: "name", selector: {text: {}}},
   {name: "layout", required: true, selector: select([["full", "Full"], ["compact", "Compact"]])},
   {type: "grid", name: "", schema: [
+    {name: "show_title", selector: {boolean: {}}},
     {name: "show_tempo", selector: {boolean: {}}},
     {name: "show_signature", selector: {boolean: {}}},
     {name: "show_timer", selector: {boolean: {}}},
@@ -22,7 +23,7 @@ const SCHEMA = [
 ];
 const LABELS = {
   entity: "Metronome entity", name: "Name (optional)", layout: "Layout",
-  show_tempo: "Show tempo marking", show_signature: "Show time signature",
+  show_title: "Show title", show_tempo: "Show tempo marking", show_signature: "Show time signature",
   show_timer: "Show timer controls", show_advanced: "Show Advanced button",
   feedback: "Beat feedback", timer_display: "Timer display",
   primary_color: "Primary colour", secondary_color: "Secondary colour",

@@ -1,6 +1,6 @@
 # Home Assistant Metronome
 
-**0.1.0-alpha.3 · second pass after the Android phone tests; still for review and device testing**
+**0.1.0-alpha.4 · second pass after the Android phone tests; still for review and device testing**
 
 A custom integration and dashboard card that play a metronome on the foreground phone or browser. Target environment: Home Assistant Core **2026.10.1**, Docker on a Raspberry Pi 4 (8 GB), with Android and iOS Companion apps.
 
@@ -23,7 +23,7 @@ This repository contains the integration, the card, installation examples, an HA
 3. Add a dashboard resource of type **JavaScript module** with this URL:
 
    ```text
-   /metronome/metronome-card.js?v=0.1.0-alpha.3
+   /metronome/metronome-card.js?v=0.1.0-alpha.4
    ```
 
    Dashboard resources may require Advanced Mode in the user profile. For YAML-managed resources, use `examples/resource.yaml` in the existing Lovelace resources configuration. Do not create a second conflicting Lovelace configuration.
@@ -65,7 +65,7 @@ The timer begins **after** count-in. Its dial edits 5–120 seconds; the fields 
 
 Pause is available only when the timer is enabled. It preserves the remaining time and beat phase; Start resumes it and recalculates the expected finish time. Stop resets the session to the configured duration. A natural finish plays a short chime unless muted. An interruption never plays the completion chime.
 
-`Ends …` is an actual clock time in the viewing client's local timezone, using HA's selected 12/24-hour preference. A date is added when it ends on a different day. The timestamp sensor stores the corresponding UTC instant for HA to display. Tempo can change live without extending an already-running countdown. Changing count-in tempo changes when the exercise begins, so it also changes its expected finish.
+`Ends …` is an actual clock time in the viewing client's local timezone, as a 24-hour clock (12-hour only when the HA profile's time format is set to 12-hour). A date is added when it ends on a different day. The timestamp sensor stores the corresponding UTC instant for HA to display. Tempo can change live without extending an already-running countdown. Changing count-in tempo changes when the exercise begins, so it also changes its expected finish.
 
 ## Card options
 
@@ -74,6 +74,7 @@ Pause is available only when the timer is enabled. It preserves the remaining ti
 | `entity` | required | The integration's `media_player` entity |
 | `name` | entity name | Optional display name |
 | `layout` | `full` | `full`, `compact` |
+| `show_title` | `true` | Show the name above the dial (compact: above the state line). The expanded dialog always shows it |
 | `show_tempo` | `true` | Show the tempo marking |
 | `show_signature` | `true` | Show the meter below BPM |
 | `show_timer` | `true` | Show timer controls and countdown |

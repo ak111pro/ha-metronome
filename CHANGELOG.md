@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.1.0-alpha.4 (unreleased)
+
+From the owner's alpha.3 re-test (everything else passed).
+
+### Added
+
+- Card option `show_title` (default `true`) hides the name; the dialog opened from a compact
+  card keeps it.
+
+### Changed
+
+- The timer's "Ends …" time uses a 24-hour clock unless the HA profile's time format is set
+  to 12-hour explicitly.
+
 ## 0.1.0-alpha.3 (unreleased)
 
 Second pass after the owner's Android re-test of alpha.2 (which confirmed the alpha.2 fixes).
