@@ -1,6 +1,7 @@
 """Session storage, notifications, countdown and foreground-client ownership."""
 
 from datetime import timedelta
+import logging
 from time import monotonic, time
 from uuid import uuid4
 
@@ -11,6 +12,8 @@ from homeassistant.helpers.storage import Store
 
 from .const import DOMAIN, LEASE_SECONDS
 from .model import Session
+
+_LOGGER = logging.getLogger(__name__)
 
 
 class MetronomeCoordinator:
@@ -30,13 +33,15 @@ class MetronomeCoordinator:
 
     async def async_load(self):
         data = await self._store.async_load()
-        if data:
-            # Invalid persisted settings should not prevent the integration loading.
-            for key, value in data.items():
-                try:
-                    self.model.configure({key: value}, time())
-                except ValueError, TypeError:
-                    continue
+        if data is not None and not isinstance(data, dict):
+            _LOGGER.warning("Ignoring stored %s settings of unexpected type", self.entry.title)
+            data = None
+        # Invalid persisted settings should not prevent the integration loading.
+        for key, value in (data or {}).items():
+            try:
+                self.model.configure({key: value}, time())
+            except ValueError, TypeError:
+                _LOGGER.warning("Ignoring invalid stored setting %s=%r", key, value)
         self._lease_cancel = async_track_time_interval(
             self.hass, self._check_lease, timedelta(seconds=3)
         )
