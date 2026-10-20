@@ -27,7 +27,7 @@ STATE = f"""(() => {{
   const shown = el => !!el && !el.hidden && !!el.offsetParent;
   return {{save: !d.shadowRoot.querySelector('[slot=primaryAction]').hasAttribute('disabled'),
     config: d._cardConfig, preview: p && {{
-      layout: r.querySelector('.compact-head') ? 'compact' : 'full',
+      layout: r.querySelector('.compact-grid') ? 'compact' : 'full',
       name: r.querySelector('.main .name')?.textContent,
       meta: (r.querySelector('.metadata') || r.querySelector('.compact-info .meta'))?.textContent,
       timer: shown(r.querySelector('[data-action=timer]')),
@@ -113,6 +113,8 @@ def no_defaults(config):
         "show_advanced": True,
         "feedback": "dots_glow",
         "timer_display": "remaining_finish",
+        "features_position": "bottom",
+        "show_title": True,
     }
     return [k for k, v in config.items() if defaults.get(k, object()) == v]
 
@@ -186,6 +188,23 @@ async def main():
             "show_advanced off",
             [switch("Show Advanced button")],
             check(yaml_show_advanced=False, advanced=False),
+        )
+        await step(
+            cdp,
+            results,
+            "features_position inline",
+            [
+                dropdown_open("Compact: tempo controls position"),
+                dropdown_pick("Inline (next to the name)"),
+            ],
+            check(yaml_features_position="inline"),
+        )
+        await step(
+            cdp,
+            results,
+            "features_position bottom",
+            [dropdown_open("Compact: tempo controls position"), dropdown_pick("Bottom")],
+            check(yaml_features_position=None),
         )
         await step(
             cdp,

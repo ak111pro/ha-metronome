@@ -93,10 +93,18 @@ Pause is available only when the timer is enabled. It preserves the remaining ti
 | `show_signature` | `true` | Show the meter below BPM |
 | `show_timer` | `true` | Show timer controls and countdown |
 | `show_advanced` | `true` | Show the Advanced button (fifth button of the transport row) |
-| `feedback` | `dots_glow` | `dots`, `dots_glow`, `off` |
+| `feedback` | `dots_glow` | `dots`, `dots_glow`, `off`. Compact card: the BPM number pulses (`dots`) and glows (`dots_glow`) on each beat |
+| `features_position` | `bottom` | Compact card: `bottom` (tempo row below the name) or `inline` (beside the name, like the Tile card's features position; falls back to bottom on cards of 340 px and narrower) |
 | `timer_display` | `remaining_finish` | `remaining`, `remaining_finish` |
 | `primary_color` | theme | Any CSS colour, see [Colours](#colours) |
 | `secondary_color` | theme | Any CSS colour, see [Colours](#colours) |
+
+**Compact card** follows HA's Tile card: a coloured icon circle, name and state line, and
+42 px feature-style buttons (−/BPM/+, then Start, Stop, Pause, Timer). Tap the icon or name
+(or focus it and press Enter) to open the full card in a dialog. While playing, the BPM number
+pulses gently on each beat in the primary colour (stronger on the accented first beat; the
+secondary colour during count-in); with reduced motion it only changes colour/glow. The full
+card keeps a stable number and its 48 px controls.
 
 Visibility settings hide controls; they do not change the shared session. A hidden timer can still be enabled by another card or automation. Tempo, duration, count-in, meter, accent, volume and mute belong to the integration instance, not the card configuration. Vibration preferences are local to the current page and reset on reload.
 

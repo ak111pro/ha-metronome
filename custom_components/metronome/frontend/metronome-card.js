@@ -46,6 +46,7 @@ export class MetronomeCard extends HTMLElement {
     if (config.layout && !["full","compact"].includes(config.layout)) throw new Error("Layout must be full or compact");
     if (config.feedback && !["dots","dots_glow","off"].includes(config.feedback)) throw new Error("Feedback must be dots, dots_glow or off");
     if (config.timer_display && !["remaining","remaining_finish"].includes(config.timer_display)) throw new Error("Invalid timer_display");
+    if (config.features_position && !["bottom","inline"].includes(config.features_position)) throw new Error("features_position must be bottom or inline");
     for (const key of COLOR_KEYS) {
       if (config[key] != null && config[key] !== "" && !validColor(String(config[key]))) throw new Error(`${key}: "${config[key]}" is not a CSS colour`);
     }
@@ -104,12 +105,13 @@ export class MetronomeCard extends HTMLElement {
 
   build() {
     this.advanced = false;
-    this.shadowRoot.innerHTML = `<style>${styles}</style><ha-card class="idle">
+    this.shadowRoot.innerHTML = `<style>${styles}</style><ha-card class="idle${this.config.layout === "compact" ? " compact" : ""}">
       <section class="main" aria-label="Metronome">
       ${this.config.layout === "compact" ? `
-        <div class="compact-head"><button type="button" class="compact-info" data-action="expand" aria-label="Open metronome controls"><div class="name"${this.config.show_title ? "" : " hidden"}></div><div class="meta"></div></button>${button("expand","Open controls","arrow-expand")}</div>
-        <div class="compact-adjust">${button("minus","Decrease by 1 BPM","minus","round")}<output class="compact-bpm"></output>${button("plus","Increase by 1 BPM","plus","round")}</div>
-        ${transport()}<div class="compact-timer" hidden></div>` : `
+        <div class="compact-grid${this.config.features_position === "inline" ? " inline" : ""}">
+          <button type="button" class="compact-info" data-action="expand" aria-label="Open metronome controls"><span class="tile-icon">${icon("metronome")}</span><span class="tile-text"><span class="name"${this.config.show_title ? "" : " hidden"}></span><span class="meta"></span></span></button>
+          <div class="compact-adjust" role="group" aria-label="Tempo">${button("minus","Decrease by 1 BPM","minus","feature")}<output class="compact-bpm" aria-label="Beats per minute"></output>${button("plus","Increase by 1 BPM","plus","feature")}</div>
+          ${transport()}<div class="compact-timer" hidden></div></div>` : `
         <header class="header"${this.config.show_title ? "" : " hidden"}><div class="name"></div></header>
         <div class="dial bpm-dial"><div class="glow" aria-hidden="true"></div>${svg()}
           <input class="sr bpm-range" type="range" min="1" max="200" step="1" aria-label="Tempo dial">
@@ -368,7 +370,7 @@ export class MetronomeCard extends HTMLElement {
     if (!state) { this.all("button,input").forEach(el => { el.disabled = true; }); return; }
     const s = state.settings, active = state.state === "playing", locked = state.state !== "idle";
     const card = this.$("ha-card");
-    card.classList.toggle("active",active); card.classList.toggle("idle",!active);
+    card.classList.toggle("active",active); card.classList.toggle("idle",!active); card.classList.toggle("paused",state.state === "paused");
     if (!active) card.classList.remove("count-in");
     card.classList.toggle("feedback-off",this.config.feedback === "off");
     this.$(".main").hidden = this.advanced;
@@ -384,6 +386,7 @@ export class MetronomeCard extends HTMLElement {
       const elsewhere = state.state !== "idle" && state.output_ready && !state.is_owner;
       this.$(".meta").textContent = `${status}${elsewhere ? " on another device" : ""} · ${meta}`;
       this.$(".compact-bpm").textContent = s.bpm;
+      this.$(".compact-info").setAttribute("aria-label", `Open ${name} controls`);
     } else {
       this.$(".status").textContent = status;
       const bpmInput = this.$(".bpm"), shown = this.shownBpm(s);
@@ -504,6 +507,7 @@ export class MetronomeCard extends HTMLElement {
     if (this.advanced || this.config.feedback === "off" || !this.isConnected) return;
     // Count-in beats use HA's accent colour (dots and glow); exercise beats the active colour.
     this.$("ha-card").classList.toggle("count-in", countIn);
+    if (this.config.layout === "compact") return this.pulseNumber(beat, countIn);
     const dots = this.all(".dots span");
     dots.forEach((el,i) => {
       el.getAnimations().forEach(animation => animation.cancel());
@@ -512,6 +516,23 @@ export class MetronomeCard extends HTMLElement {
     if (this.motion.matches) return;
     dots[beat]?.animate([{opacity:.28,transform:"scale(1)"},{opacity:1,transform:"scale(1.35)",offset:.15},{opacity:.28,transform:"scale(1)"}],{duration:Math.min(300,60000/this.player.state.settings.bpm*.8),easing:"ease-in-out"});
     if (this.config.feedback === "dots_glow") this.$(".glow")?.animate([{opacity:0},{opacity:.10,offset:.2},{opacity:0}],{duration:320,easing:"ease-in-out"});
+  }
+
+  /* Compact only: the BPM number pulses on each beat (the full card keeps a stable number).
+   * Primary colour for beats, a stronger pulse on the accented first beat, secondary colour
+   * for count-in. dots = pulse only, dots_glow = pulse + glow; reduced motion: no scale. */
+  pulseNumber(beat, countIn) {
+    const el = this.$(".compact-bpm"), s = this.player?.state?.settings;
+    if (!el || !s) return;
+    el.getAnimations().forEach(animation => animation.cancel());
+    const css = getComputedStyle(this.$("ha-card"));
+    const color = css.getPropertyValue(countIn ? "--highlight" : "--accent").trim();
+    const strong = !countIn && beat === 0 && s.accent;
+    const peak = {color, offset: .15};
+    if (!this.motion.matches) peak.transform = `scale(${strong ? 1.2 : 1.1})`;
+    if (this.config.feedback === "dots_glow") peak.textShadow = `0 0 ${strong ? 16 : 10}px ${color}`;
+    const rest = {transform: "scale(1)", textShadow: "0 0 0 transparent"};
+    el.animate([rest, peak, rest], {duration: Math.min(320, 60000 / s.bpm * .8), easing: "ease-in-out"});
   }
 
   openDialog() {

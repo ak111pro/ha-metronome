@@ -17,6 +17,7 @@ const SCHEMA = [
     {name: "show_advanced", selector: {boolean: {}}},
   ]},
   {name: "feedback", required: true, selector: select([["dots_glow", "Dots and subtle glow"], ["dots", "Dots"], ["off", "Off"]])},
+  {name: "features_position", required: true, selector: select([["bottom", "Bottom"], ["inline", "Inline (next to the name)"]])},
   {name: "timer_display", required: true, selector: select([["remaining_finish", "Remaining time and finish time"], ["remaining", "Remaining time"]])},
   {name: "primary_color", selector: {text: {}}},
   {name: "secondary_color", selector: {text: {}}},
@@ -25,12 +26,13 @@ const LABELS = {
   entity: "Metronome entity", name: "Name (optional)", layout: "Layout",
   show_title: "Show title", show_tempo: "Show tempo marking", show_signature: "Show time signature",
   show_timer: "Show timer controls", show_advanced: "Show Advanced button",
-  feedback: "Beat feedback", timer_display: "Timer display",
+  feedback: "Beat feedback", features_position: "Compact: tempo controls position", timer_display: "Timer display",
   primary_color: "Primary colour", secondary_color: "Secondary colour",
 };
 const HELPERS = {
   name: "Default: the metronome's name",
   layout: "Compact opens the full card in a dialog",
+  features_position: "Like the Tile card's features position; inline falls back to bottom on narrow cards",
   primary_color: "Default: theme media-player colour (arcs, handle, beat dots, toggles). Name, #hex, rgb(), hsl() or var(--…)",
   secondary_color: "Default: theme accent colour (count-in beats, selected timer field). Name, #hex, rgb(), hsl() or var(--…)",
 };

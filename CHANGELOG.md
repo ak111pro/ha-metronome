@@ -1,5 +1,23 @@
 # Changelog
 
+## 0.1.0-alpha.5 (unreleased)
+
+From the owner's alpha.3/alpha.4 re-test.
+
+### Added
+
+- Native Tile, more-info and device-page Play works on a page that never tapped Start: the
+  card module arms the page on every tap (shared AudioContext resumed in the gesture,
+  `metronome/arm` to HA) and keeps standby subscriptions; a native play from the same user
+  within 3 s selects the tapped page, even over another ready device. Automations unchanged.
+- Card option `features_position` (`bottom`/`inline`) for the compact card.
+
+### Changed
+
+- Compact card in HA Tile style (icon circle, tile typography, 42 px feature buttons); no
+  expand button: tap the icon/name to open the full card. The BPM number pulses and glows on
+  each beat (respects `feedback` and reduced motion).
+
 ## 0.1.0-alpha.4 (unreleased)
 
 From the owner's alpha.3 re-test (everything else passed).

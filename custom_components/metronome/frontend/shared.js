@@ -7,6 +7,7 @@ export const METERS = {"2/4": 2, "3/4": 3, "4/4": 4, "6/8": 2};
 export const DEFAULT_CONFIG = {
   layout: "full", show_title: true, show_tempo: true, show_signature: true, show_timer: true,
   show_advanced: true, feedback: "dots_glow", timer_display: "remaining_finish",
+  features_position: "bottom",
 };
 /* Card YAML keeps only what differs from the defaults: `type` and `entity` first, other
  * keys in their order, empty strings and default values dropped, unknown keys kept. */
