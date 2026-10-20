@@ -10,7 +10,7 @@ PROBE = f"""(() => {{ const r = {FULL}.shadowRoot, card = r.querySelector('ha-ca
   const dot = r.querySelector('.dots span'), glow = r.querySelector('.glow');
   return {{countIn: card.classList.contains('count-in'), dot: getComputedStyle(dot).backgroundColor,
     glow: getComputedStyle(glow).backgroundImage.slice(0, 60),
-    accent: getComputedStyle(card).getPropertyValue('--count-in').trim(),
+    accent: getComputedStyle(card).getPropertyValue('--highlight').trim(),
     opacities: [...r.querySelectorAll('.dots span')].map(e => getComputedStyle(e).opacity)}};
 }})()"""
 

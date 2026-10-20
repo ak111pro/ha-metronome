@@ -17,9 +17,14 @@ export function cleanConfig(config) {
     if (key in out || value === undefined || value === null) continue;
     if (typeof value === "string" && value.trim() === "" && key !== "type") continue;
     if (key in DEFAULT_CONFIG && DEFAULT_CONFIG[key] === value) continue;
-    out[key] = typeof value === "string" ? value.trim() : value;
+    out[key] = value;  // not trimmed: the editor writes on every keystroke
   }
   return out;
+}
+/* Card colours: any CSS colour (names, #hex, rgb()/hsl(), var(--…)). Blank = theme default. */
+export const COLOR_KEYS = ["primary_color", "secondary_color"];
+export function validColor(value, supports = globalThis.CSS?.supports?.bind(globalThis.CSS)) {
+  return typeof value === "string" && value.trim() !== "" && !!supports?.("color", value.trim());
 }
 export const clamp = (value, min, max) => Math.max(min, Math.min(max, Number(value) || 0));
 export const escapeHTML = value => String(value ?? "").replace(/[&<>"']/g, c => ({

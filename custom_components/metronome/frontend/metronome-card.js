@@ -1,7 +1,7 @@
 import {getPlayer} from "./player.js?v=0.1.0-alpha.2";
 import {styles} from "./styles.js?v=0.1.0-alpha.2";
-import {DEFAULT_CONFIG, METERS, escapeHTML as esc, clamp, tempo, remaining, splitTime,
-  timeText, arc, point, dialFraction, beatPosition, hapticMode} from "./shared.js?v=0.1.0-alpha.2";
+import {DEFAULT_CONFIG, COLOR_KEYS, METERS, escapeHTML as esc, clamp, tempo, remaining, splitTime,
+  timeText, arc, point, dialFraction, beatPosition, hapticMode, validColor} from "./shared.js?v=0.1.0-alpha.2";
 
 const icon = name => `<ha-icon icon="mdi:${name}" aria-hidden="true"></ha-icon>`;
 const button = (action, label, glyph, cls = "control") =>
@@ -46,7 +46,16 @@ export class MetronomeCard extends HTMLElement {
     if (config.layout && !["full","compact"].includes(config.layout)) throw new Error("Layout must be full or compact");
     if (config.feedback && !["dots","dots_glow","off"].includes(config.feedback)) throw new Error("Feedback must be dots, dots_glow or off");
     if (config.timer_display && !["remaining","remaining_finish"].includes(config.timer_display)) throw new Error("Invalid timer_display");
+    for (const key of COLOR_KEYS) {
+      if (config[key] != null && config[key] !== "" && !validColor(String(config[key]))) throw new Error(`${key}: "${config[key]}" is not a CSS colour`);
+    }
     this.config = {...DEFAULT_CONFIG, ...config};
+    // primary_color / secondary_color override the theme through these two properties.
+    for (const key of COLOR_KEYS) {
+      const property = `--metronome-${key.replace("_","-")}`;
+      if (this.config[key]) this.style.setProperty(property, String(this.config[key]).trim());
+      else this.style.removeProperty(property);
+    }
     this.build();
     this.connect();
   }

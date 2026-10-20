@@ -10,7 +10,11 @@ the dashboard) and the original dashboard config is restored through the websock
 
 import json
 
+import sys
+
 from cdp import HA, aiohttp, login, open_page, run, token
+
+SHOTS = sys.argv[1] if len(sys.argv) > 1 else None  # optional screenshot directory
 
 DEEP = """window.deep = (sel, root = document) => { const out = [];
   const walk = r => { for (const el of r.querySelectorAll('*')) {
@@ -59,6 +63,20 @@ def type_text(label, text):
       input.dispatchEvent(new Event('change', {{bubbles: true, composed: true}})); return 1; }})()"""
 
 
+def keyboard(label, text):
+    """Real key-by-key typing (the form round-trips the config after every keystroke)."""
+
+    async def run_keys(cdp):
+        await cdp.js(f"""(() => {{ const sel = deep('ha-selector-text', {EDITOR}.shadowRoot)
+          .find(e => e.label === {json.dumps(label)});
+          const input = deep('input', sel.shadowRoot)[0]; input.focus(); input.select(); return 1; }})()""")
+        for ch in text:
+            await cdp.call("Input.insertText", text=ch)
+            await cdp.idle(0.15)
+
+    return run_keys
+
+
 async def open_editor(cdp):
     await login(cdp, "/metronome-test/full?edit=1", wait=15)
     await cdp.js(DEEP)
@@ -72,7 +90,10 @@ async def open_editor(cdp):
 
 async def step(cdp, results, label, actions, expect):
     for action in actions:
-        await cdp.js(action, gesture=True)
+        if callable(action):
+            await action(cdp)
+        else:
+            await cdp.js(action, gesture=True)
         await cdp.idle(0.8)
     st = await cdp.js(STATE)
     problems = expect(st)
@@ -112,7 +133,7 @@ async def main():
         st = await cdp.js(STATE)
         print("initial", st["config"], "save", st["save"])
         assert st["config"] == {"type": "custom:metronome-card", "entity": "media_player.metronome"}
-        await step(cdp, results, "name", [type_text("Name (optional)", "Practice room")],
+        await step(cdp, results, "name", [keyboard("Name (optional)", "Practice room")],
                    check(yaml_name="Practice room", name="Practice room"))
         await step(cdp, results, "layout compact",
                    [dropdown_open("Layout"), dropdown_pick("Compact")],
@@ -198,8 +219,10 @@ async def colour_steps(cdp, results):
     await step(cdp, results, "secondary hex", [type_text("Secondary colour", "#16809e")],
                check(yaml_secondary_color="#16809e", secondary="#16809e"))
     # Invalid: shown as an error, not saved (config keeps the last valid value).
-    await cdp.js(type_text("Primary colour", "notacolour"), gesture=True)
+    await keyboard("Primary colour", "notacolour")(cdp)
     await cdp.idle(0.8)
+    if SHOTS:
+        await cdp.shot(f"{SHOTS}/editor-colour-error.png")
     st = await cdp.js(STATE)
     err = await cdp.js(f"{EDITOR}.form.error?.primary_color || ''")
     bad = [] if st["config"].get("primary_color") == "teal" and err else [st["config"], err]

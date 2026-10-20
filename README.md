@@ -71,10 +71,35 @@ Pause is available only when the timer is enabled. It preserves the remaining ti
 | `show_advanced` | `true` | Show the Advanced button (fifth button of the transport row) |
 | `feedback` | `dots_glow` | `dots`, `dots_glow`, `off` |
 | `timer_display` | `remaining_finish` | `remaining`, `remaining_finish` |
+| `primary_color` | theme | Any CSS colour, see [Colours](#colours) |
+| `secondary_color` | theme | Any CSS colour, see [Colours](#colours) |
 
 Visibility settings hide controls; they do not change the shared session. A hidden timer can still be enabled by another card or automation. Tempo, duration, count-in, meter, accent, volume and mute belong to the integration instance, not the card configuration. Vibration preferences are local to the current page and reset on reload.
 
 The card uses `ha-card`, `ha-icon`, HA theme tokens, 48px primary controls and semantic keyboard-accessible inputs. Its thermostat-like dials, menus and expanded dialog are custom controls. It is visually aligned with HA; it is **not an upstream HA card or a guarantee that every control is HA's own internal component**. Native-theme and accessibility checks remain part of the handoff.
+
+## Colours
+
+The card follows the HA theme. Two optional card options override it for one card:
+
+| Option | Colours | Default |
+| --- | --- | --- |
+| `primary_color` | BPM and timer arcs (active part and the muted idle arc), dial handles, countdown progress, the "Active" status, Tap, beat dots of normal beats and the glow, the pressed Timer button, toggles that are on (Accent, Mute, Vibration), volume fill, focus rings and the BPM input highlight | the theme's media-player active colour (`--state-media_player-active-color`, which falls back to `--primary-color`) |
+| `secondary_color` | Count-in beats (dots and glow) and the selected hours/minutes/seconds timer field | the theme's accent colour (`--accent-color`) |
+
+Values are any CSS colour: names (`teal`), hex (`"#16809e"`, `"#fff"`; quote them in YAML),
+`rgb()`/`hsl()`, or a theme variable (`var(--red-color)`). The card editor checks each value
+with the browser's `CSS.supports('color', …)`, shows an error for anything else and does not
+save it; a YAML value that is not a colour shows a card error. Leave an option empty for the
+theme default. A theme can also set `metronome-primary-color` / `metronome-secondary-color`
+for every metronome card.
+
+```yaml
+type: custom:metronome-card
+entity: media_player.practice
+primary_color: teal
+secondary_color: "#9c27b0"
+```
 
 ## Haptics
 

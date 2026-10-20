@@ -1,7 +1,7 @@
 // Pure math/format checks. Does not exercise HA, a DOM or a real AudioContext.
 import assert from "node:assert/strict";
 import {readFileSync, readdirSync} from "node:fs";
-import {METERS, cleanConfig, tempo, dialFraction, point, remaining, timeText, escapeHTML, hapticMode, HAPTIC_TYPES, VERSION} from "../custom_components/metronome/frontend/shared.js";
+import {METERS, cleanConfig, validColor, tempo, dialFraction, point, remaining, timeText, escapeHTML, hapticMode, HAPTIC_TYPES, VERSION} from "../custom_components/metronome/frontend/shared.js";
 assert.equal(METERS["6/8"],2);
 for (const [bpm,marking] of [[1,"Larghissimo"],[60,"Larghetto"],[120,"Allegro"],[200,"Prestissimo"]]) assert.equal(tempo(bpm),marking);
 for (const inverted of [false,true]) {
@@ -29,8 +29,12 @@ assert.deepEqual([20, 40, 70].map(ms => HAPTIC_TYPES[ms]), ["light", "medium", "
 assert.deepEqual(Object.entries(cleanConfig({layout: "full", show_tempo: true, feedback: "dots_glow",
   entity: "media_player.m", type: "custom:metronome-card", name: "  ", show_timer: false, extra: 1})),
   [["type", "custom:metronome-card"], ["entity", "media_player.m"], ["show_timer", false], ["extra", 1]]);
-assert.deepEqual(cleanConfig({type: "t", entity: "e", name: " Practice ", timer_display: "remaining"}),
-  {type: "t", entity: "e", name: "Practice", timer_display: "remaining"});
+assert.deepEqual(cleanConfig({type: "t", entity: "e", name: "Practice ", timer_display: "remaining"}),
+  {type: "t", entity: "e", name: "Practice ", timer_display: "remaining"});
+// Colours: validated with CSS.supports('color', …) (stubbed here), blank means theme default.
+const supports = (prop, v) => prop === "color" && /^(teal|#[0-9a-f]{3}|#[0-9a-f]{6}|rgb\(.*\)|hsl\(.*\)|var\(--.*\))$/i.test(v);
+for (const ok of ["teal", "#fff", "#16809e", "rgb(1, 2, 3)", "hsl(200 80% 40%)", "var(--red-color)", " teal "]) assert.ok(validColor(ok, supports), ok);
+for (const bad of ["", "  ", "notacolour", null, 42]) assert.ok(!validColor(bad, supports), String(bad));
 // One version everywhere, and every relative module import is versioned (cache busting).
 const root = new URL("../custom_components/metronome/", import.meta.url);
 assert.equal(VERSION, JSON.parse(readFileSync(new URL("manifest.json", root))).version);
