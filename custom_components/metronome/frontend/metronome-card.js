@@ -286,23 +286,30 @@ export class MetronomeCard extends HTMLElement {
       const fraction = dialFraction(event.clientX-rect.left-rect.width/2,event.clientY-rect.top-rect.height/2,inverted);
       const value = Math.round(inverted ? 5 + fraction*115 : 1 + fraction*199);
       this.draw(dial, fraction, inverted);
-      if (!inverted) this.previewBpm(value);
+      // Live preview of the number (BPM) or the h/m/s fields (timer) while dragging; the
+      // value is sent coalesced (80 ms) and committed on release.
+      if (inverted) this.previewDuration(value); else this.previewBpm(value);
       this.patch({[inverted ? "duration" : "bpm"]: value}, true);
     };
     const end = event => {
       if (dragging !== event.pointerId) return;
       if (event.type === "pointerup") move(event);
       dragging = null;
-      this.dragBpm = null;
       dial.classList.remove("dragging");
       if (path.hasPointerCapture?.(event.pointerId)) path.releasePointerCapture(event.pointerId);
-      this.flushPatch();
+      // Keep showing the dragged value until HA confirmed it, so it never jumps back.
+      const drag = this.dragToken;
+      Promise.resolve(this.flushPatch()).finally(() => {
+        if (drag !== this.dragToken) return;
+        this.dragBpm = null; this.dragDuration = null; this.update();
+      });
     };
     path.addEventListener("pointerdown", event => {
       const s = this.player?.state;
       if (!s || (inverted && (s.state !== "idle" || s.settings.duration < 5 || s.settings.duration > 120))) return;
       event.preventDefault();
       dragging = event.pointerId;
+      this.dragToken = (this.dragToken || 0) + 1;
       dial.classList.add("dragging");
       try { path.setPointerCapture(event.pointerId); } catch (_) { /* pointer already gone */ }
       move(event);
@@ -322,6 +329,10 @@ export class MetronomeCard extends HTMLElement {
     const input = this.$(".bpm");
     if (input && this.shadowRoot.activeElement !== input) input.value = bpm;
     if (this.player?.state) this.$(".metadata").textContent = this.meta(this.player.state.settings, bpm);
+  }
+  previewDuration(seconds) {
+    this.dragDuration = seconds;
+    this.updateClock();
   }
   // The BPM the dial shows: dragged, typed (null while the typed text is not 1-200),
   // otherwise the committed value.
@@ -460,17 +471,19 @@ export class MetronomeCard extends HTMLElement {
       label.textContent = `${timeText(locked ? rem : finished ? 0 : s.duration)}${this.finishLabel() ? " · " + this.finishLabel() : ""}`;
       return;
     }
-    const dial = this.$(".timer-dial"), outside = !locked && (s.duration < 5 || s.duration > 120);
+    // While the timer handle is dragged, the fields follow it (s.duration lags behind).
+    const duration = !locked && this.dragDuration != null ? this.dragDuration : s.duration;
+    const dial = this.$(".timer-dial"), outside = !locked && (duration < 5 || duration > 120);
     dial.classList.toggle("outside",outside); dial.classList.toggle("locked",locked);
-    if (!dial.classList.contains("dragging")) this.draw(dial,locked ? rem/s.duration : finished ? 0 : (s.duration-5)/115,true);
+    if (!dial.classList.contains("dragging")) this.draw(dial,locked ? rem/s.duration : finished ? 0 : (duration-5)/115,true);
     const range = this.$(".timer-range");
-    range.disabled = locked || outside; range.hidden = locked; range.value = clamp(s.duration,5,120);
+    range.disabled = locked || outside; range.hidden = locked; range.value = clamp(duration,5,120);
     const progress = this.$(".progress");
     progress.hidden = !locked;
     progress.setAttribute("aria-valuemax",s.duration);
     progress.setAttribute("aria-valuenow",Math.ceil(rem));
     progress.setAttribute("aria-valuetext",`${timeText(rem)} remaining`);
-    const fields = splitTime(locked ? rem : finished ? 0 : s.duration);
+    const fields = splitTime(locked ? rem : finished && this.dragDuration == null ? 0 : duration);
     this.all("[data-field]").forEach((input,i) => {
       input.disabled = locked; input.classList.toggle("selected",i === this.selectedField && !locked);
       const text = String(fields[i]).padStart(2,"0");
