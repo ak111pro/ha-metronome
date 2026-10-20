@@ -1,6 +1,6 @@
 # Validation record and next-stage test plan
 
-## Status (2026-10-20, repository import)
+## Status (2026-10-20, 0.1.0-alpha.2)
 
 | Area | Status |
 | --- | --- |
@@ -9,7 +9,8 @@
 | HACS action | Not run yet (needs the GitHub repository) |
 | Live HA instance (websocket, REST, restart) | **Verified** on the ha-dev test instance (HA 2026.10.2) |
 | Card in a real browser | **Rendered and driven** in headless Chromium 155 (no audible output) |
-| Android/iOS Companion apps, audio timing, accessibility | **Not tested** — needs real devices |
+| Android Companion app | **First owner test** (Galaxy S21 Ultra, 2026-10-20): audio and vibration work (vibration needs the phone out of Samsung "Mute" mode); issues found are fixed in alpha.2, re-test pending |
+| iOS Companion app, audio timing, accessibility | **Not tested** — needs real devices |
 
 ### HA tests (pytest)
 
@@ -79,6 +80,26 @@ anonymous websocket transport (rejected by HA itself before any metronome code r
   0.500 s apart, and the two-tone chime once at the deadline; the compact card's dialog shares
   the same player; leaving the page releases output (`interrupted`). Audio was muted, so this
   checks scheduling, not sound.
+
+### Browser checks against a test instance (`checks/cdp/`)
+
+Chrome DevTools scripts that drive the real card in headless Chromium against a running HA
+(ha-dev). Start `chromium --headless=new --remote-debugging-port=9333 --mute-audio`, then
+`METRONOME_TOKEN_FILE=<token file> python checks/cdp/<script>.py` (needs `aiohttp`). They
+bypass HA's service worker and the HTTP cache. Results for alpha.2 (Chromium 155, 360 px):
+
+| Script | What it checks | Result |
+| --- | --- | --- |
+| `touch_drag.py` | Touch drag on the BPM/timer arcs changes the value without scrolling; a swipe from the dial centre scrolls | BPM 100→144, timer 30→51 s, 0 px page movement; centre swipe 95 px (before: BPM drag stopped at 106, timer drag scrolled 81 px) |
+| `bpm_input.py` | BPM focus box width, preview while typing, Enter commits, Escape reverts; timer field width | 124 px box (dial 318 px), marking follows typed value, none for 600; fields 52 px |
+| `ready_client.py` | Native `media_play` after Start/Stop, view switches, compact dialog, more-info, Advanced, page hidden/visible, websocket reconnect, other HA page, 20 s idle; hidden while playing; a second page | 14/14 (before: 7/11, every hide or reconnect lost the selection) |
+| `layout.py` | Advanced controls 48 px, no wrapped/truncated labels, no overflow, Advanced button width; 280/320/360/440 px, light and dark | 0 problems (before: 8) |
+| `haptics.py` | `navigator.vibrate` path, simulated iOS Companion `haptic` path (Long → heavy), hidden without either | passes |
+| `count_in.py` | Count-in dots/glow in `--accent-color`, exercise beats in the active colour, also with reduced motion | passes |
+
+The iOS path is simulated (no `navigator.vibrate`, a stub external bus); HA's frontend
+forwarding of the `haptic` event to the app was read from frontend 20260930.4
+(`attachExternalToApp`), not observed on an iPhone.
 
 ## Still needs real devices
 

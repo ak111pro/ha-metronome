@@ -1,4 +1,4 @@
-import {DEFAULT_CONFIG, escapeHTML as esc} from "./shared.js";
+import {DEFAULT_CONFIG, escapeHTML as esc} from "./shared.js?v=0.1.0-alpha.2";
 
 class MetronomeCardEditor extends HTMLElement {
   constructor() { super(); this.attachShadow({mode:"open"}); }

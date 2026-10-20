@@ -1,7 +1,7 @@
-import {getPlayer} from "./player.js";
-import {styles} from "./styles.js";
+import {getPlayer} from "./player.js?v=0.1.0-alpha.2";
+import {styles} from "./styles.js?v=0.1.0-alpha.2";
 import {DEFAULT_CONFIG, METERS, escapeHTML as esc, clamp, tempo, remaining, splitTime,
-  timeText, arc, point, dialFraction, beatPosition, hapticMode} from "./shared.js";
+  timeText, arc, point, dialFraction, beatPosition, hapticMode} from "./shared.js?v=0.1.0-alpha.2";
 
 const icon = name => `<ha-icon icon="mdi:${name}" aria-hidden="true"></ha-icon>`;
 const button = (action, label, glyph, cls = "control") =>
@@ -23,7 +23,7 @@ const transport = () => `<div class="transport" role="group" aria-label="Playbac
 
 export class MetronomeCard extends HTMLElement {
   static async getConfigElement() {
-    await import("./editor.js");
+    await import("./editor.js?v=0.1.0-alpha.2");
     return document.createElement("metronome-card-editor");
   }
   static getStubConfig(hass) {

@@ -1,6 +1,7 @@
 // Pure math/format checks. Does not exercise HA, a DOM or a real AudioContext.
 import assert from "node:assert/strict";
-import {METERS, tempo, dialFraction, point, remaining, timeText, escapeHTML, hapticMode, HAPTIC_TYPES} from "../custom_components/metronome/frontend/shared.js";
+import {readFileSync, readdirSync} from "node:fs";
+import {METERS, tempo, dialFraction, point, remaining, timeText, escapeHTML, hapticMode, HAPTIC_TYPES, VERSION} from "../custom_components/metronome/frontend/shared.js";
 assert.equal(METERS["6/8"],2);
 for (const [bpm,marking] of [[1,"Larghissimo"],[60,"Larghetto"],[120,"Allegro"],[200,"Prestissimo"]]) assert.equal(tempo(bpm),marking);
 for (const inverted of [false,true]) {
@@ -24,4 +25,13 @@ assert.equal(hapticMode({}, {webkit: {messageHandlers: {externalBus: {}}}}), "co
 assert.equal(hapticMode({}, {externalApp: {}}), "companion");
 assert.equal(hapticMode({}, {webkit: {}}), null);
 assert.deepEqual([20, 40, 70].map(ms => HAPTIC_TYPES[ms]), ["light", "medium", "heavy"]);
+// One version everywhere, and every relative module import is versioned (cache busting).
+const root = new URL("../custom_components/metronome/", import.meta.url);
+assert.equal(VERSION, JSON.parse(readFileSync(new URL("manifest.json", root))).version);
+for (const file of readdirSync(new URL("frontend/", root)).filter(f => f.endsWith(".js"))) {
+  const source = readFileSync(new URL(`frontend/${file}`, root), "utf8");
+  for (const [, spec] of source.matchAll(/(?:from|import\()\s*"(\.\/[^"]+)"/g)) {
+    assert.ok(spec.endsWith(`.js?v=${VERSION}`), `${file}: unversioned import ${spec}`);
+  }
+}
 console.log("Frontend helper checks passed");
