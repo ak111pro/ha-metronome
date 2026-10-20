@@ -1,12 +1,12 @@
 """Session storage, notifications, countdown and foreground-client ownership."""
 
 from datetime import timedelta
-from time import time, monotonic
+from time import monotonic, time
 from uuid import uuid4
 
 from homeassistant.core import callback
 from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers.event import async_track_time_interval, async_call_later
+from homeassistant.helpers.event import async_call_later, async_track_time_interval
 from homeassistant.helpers.storage import Store
 
 from .const import DOMAIN, LEASE_SECONDS
@@ -35,9 +35,11 @@ class MetronomeCoordinator:
             for key, value in data.items():
                 try:
                     self.model.configure({key: value}, time())
-                except (ValueError, TypeError):
+                except ValueError, TypeError:
                     continue
-        self._lease_cancel = async_track_time_interval(self.hass, self._check_lease, timedelta(seconds=3))
+        self._lease_cancel = async_track_time_interval(
+            self.hass, self._check_lease, timedelta(seconds=3)
+        )
 
     @callback
     def listen(self, listener):
@@ -50,7 +52,8 @@ class MetronomeCoordinator:
             "name": self.entry.title,
             "output_ready": self.owner is not None,
             "is_owner": client is not None and client == self.owner,
-            "instance_id": self.instance_id, "sequence": self.sequence,
+            "instance_id": self.instance_id,
+            "sequence": self.sequence,
         }
 
     @callback
@@ -69,7 +72,9 @@ class MetronomeCoordinator:
         if token not in self.clients:
             raise HomeAssistantError("Open the metronome card on this device first")
         if self.owner is not None and self.owner != token and self.model.state != "idle":
-            raise HomeAssistantError("Another device is playing. Stop the session before selecting this device")
+            raise HomeAssistantError(
+                "Another device is playing. Stop the session before selecting this device"
+            )
         self.owner = token
         self.clients[token]["seen"] = monotonic()
         self._notify()
@@ -103,8 +108,13 @@ class MetronomeCoordinator:
             self._notify(event)
         try:
             if action == "start":
-                if self.owner is None or monotonic() - self.clients[self.owner]["seen"] > LEASE_SECONDS:
-                    raise ValueError("Tap Start in the metronome card to enable audio on a foreground device")
+                if (
+                    self.owner is None
+                    or monotonic() - self.clients[self.owner]["seen"] > LEASE_SECONDS
+                ):
+                    raise ValueError(
+                        "Tap Start in the metronome card to enable audio on a foreground device"
+                    )
                 event = self.model.start(now)
             elif action == "pause":
                 event = self.model.pause(now)
@@ -123,7 +133,9 @@ class MetronomeCoordinator:
             self._finish_cancel()
             self._finish_cancel = None
         if self.model.ends_at is not None:
-            self._finish_cancel = async_call_later(self.hass, max(0, self.model.ends_at - time()), self._finish)
+            self._finish_cancel = async_call_later(
+                self.hass, max(0, self.model.ends_at - time()), self._finish
+            )
         for listener in tuple(self.listeners):
             listener()
         for token, client in tuple(self.clients.items()):
@@ -140,7 +152,10 @@ class MetronomeCoordinator:
 
     @callback
     def _check_lease(self, _now):
-        if self.owner is not None and monotonic() - self.clients[self.owner]["seen"] > LEASE_SECONDS:
+        if (
+            self.owner is not None
+            and monotonic() - self.clients[self.owner]["seen"] > LEASE_SECONDS
+        ):
             self.release(self.owner)
 
     async def async_unload(self):

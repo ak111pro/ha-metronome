@@ -1,7 +1,9 @@
 """Expected finish time for native HA dashboards and automations."""
 
-from datetime import datetime, timezone
-from homeassistant.components.sensor import SensorEntity, SensorDeviceClass
+from datetime import UTC, datetime
+
+from homeassistant.components.sensor import SensorDeviceClass, SensorEntity
+
 from .entity import MetronomeEntity
 
 
@@ -18,4 +20,4 @@ class FinishSensor(MetronomeEntity, SensorEntity):
     @property
     def native_value(self):
         value = self.coordinator.model.ends_at
-        return datetime.fromtimestamp(value, timezone.utc) if value is not None else None
+        return datetime.fromtimestamp(value, UTC) if value is not None else None

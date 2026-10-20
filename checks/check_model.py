@@ -20,8 +20,9 @@ Session = model.Session
 
 class ModelChecks(unittest.TestCase):
     def test_count_in_and_finish(self):
-        s = Session({"bpm": 120, "signature": "6/8", "count_in": 2,
-                     "timer_enabled": True, "duration": 5})
+        s = Session(
+            {"bpm": 120, "signature": "6/8", "count_in": 2, "timer_enabled": True, "duration": 5}
+        )
         self.assertEqual(s.start(100), "started")
         self.assertEqual(s.anchor_beat, -4)
         self.assertAlmostEqual(s.ends_at, 107.2)
@@ -83,9 +84,16 @@ class ModelChecks(unittest.TestCase):
 
     def test_validation_is_atomic(self):
         s = Session()
-        for patch in ({"bpm": 201}, {"bpm": True}, {"duration": 0},
-                      {"bpm": float("nan")}, {"count_in": 1.5}, {"signature": "7/8"},
-                      {"volume": 2}, {"bpm": 80, "duration": -1}):
+        for patch in (
+            {"bpm": 201},
+            {"bpm": True},
+            {"duration": 0},
+            {"bpm": float("nan")},
+            {"count_in": 1.5},
+            {"signature": "7/8"},
+            {"volume": 2},
+            {"bpm": 80, "duration": -1},
+        ):
             with self.assertRaises(ValueError):
                 s.configure(patch, 0)
             self.assertEqual(s.settings["bpm"], 120)
@@ -93,7 +101,12 @@ class ModelChecks(unittest.TestCase):
     def test_session_locks_structural_settings(self):
         s = Session({"timer_enabled": True})
         s.start(0)
-        for patch in ({"duration": 90}, {"timer_enabled": False}, {"signature": "3/4"}, {"count_in": 1}):
+        for patch in (
+            {"duration": 90},
+            {"timer_enabled": False},
+            {"signature": "3/4"},
+            {"count_in": 1},
+        ):
             with self.assertRaises(ValueError):
                 s.configure(patch, 2)
         s.configure({"muted": True, "volume": 0.1, "accent": False}, 2)

@@ -1,8 +1,10 @@
 """Home Assistant metronome with explicitly selected frontend audio output."""
 
 from pathlib import Path
+
 from homeassistant.components.http import StaticPathConfig
 from homeassistant.helpers.storage import Store
+
 from .const import DOMAIN, PLATFORMS
 from .coordinator import MetronomeCoordinator
 from .websocket import async_register_commands
@@ -10,9 +12,9 @@ from .websocket import async_register_commands
 
 async def async_setup(hass, config):
     hass.data.setdefault(DOMAIN, {})
-    await hass.http.async_register_static_paths([
-        StaticPathConfig("/metronome", str(Path(__file__).parent / "frontend"), False)
-    ])
+    await hass.http.async_register_static_paths(
+        [StaticPathConfig("/metronome", str(Path(__file__).parent / "frontend"), False)]
+    )
     async_register_commands(hass)
     return True
 

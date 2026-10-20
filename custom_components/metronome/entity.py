@@ -1,6 +1,7 @@
 """Shared entity identity and state subscriptions."""
 
-from homeassistant.helpers.entity import Entity, DeviceInfo
+from homeassistant.helpers.entity import DeviceInfo, Entity
+
 from .const import DOMAIN, VERSION
 
 

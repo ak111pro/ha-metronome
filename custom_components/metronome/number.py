@@ -1,15 +1,26 @@
 """Automation-accessible tempo and configured timer duration."""
 
 from homeassistant.components.number import NumberEntity, NumberMode
+
 from .const import MAX_DURATION
 from .entity import MetronomeEntity
 
 
 async def async_setup_entry(hass, entry, async_add_entities):
-    async_add_entities([
-        MetronomeNumber(entry.runtime_data, "bpm", "Tempo", "mdi:metronome", 1, 200, "BPM"),
-        MetronomeNumber(entry.runtime_data, "duration", "Timer duration", "mdi:timer-outline", 1, MAX_DURATION, "s"),
-    ])
+    async_add_entities(
+        [
+            MetronomeNumber(entry.runtime_data, "bpm", "Tempo", "mdi:metronome", 1, 200, "BPM"),
+            MetronomeNumber(
+                entry.runtime_data,
+                "duration",
+                "Timer duration",
+                "mdi:timer-outline",
+                1,
+                MAX_DURATION,
+                "s",
+            ),
+        ]
+    )
 
 
 class MetronomeNumber(MetronomeEntity, NumberEntity):

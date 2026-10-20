@@ -1,6 +1,7 @@
 """Session transitions, never per-beat state updates."""
 
 from homeassistant.components.event import EventEntity
+
 from .const import EVENT_TYPES
 from .entity import MetronomeEntity
 

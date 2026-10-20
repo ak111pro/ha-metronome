@@ -1,7 +1,9 @@
 """Configure independent named metronomes from the UI."""
 
 import probatio as vol
+
 from homeassistant import config_entries
+
 from .const import DOMAIN
 
 

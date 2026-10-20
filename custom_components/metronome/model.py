@@ -23,10 +23,18 @@ def validate_settings(changes):
             if value not in SIGNATURES:
                 raise ValueError("Choose 2/4, 3/4, 4/4 or 6/8")
         else:
-            if isinstance(value, bool) or not isinstance(value, (int, float)) or not isfinite(value):
+            if (
+                isinstance(value, bool)
+                or not isinstance(value, (int, float))
+                or not isfinite(value)
+            ):
                 raise ValueError(f"{key} must be a finite number")
-            low, high = {"bpm": (1, 200), "duration": (1, MAX_DURATION),
-                         "count_in": (0, 2), "volume": (0, 1)}[key]
+            low, high = {
+                "bpm": (1, 200),
+                "duration": (1, MAX_DURATION),
+                "count_in": (0, 2),
+                "volume": (0, 1),
+            }[key]
             if not low <= value <= high or (key != "volume" and int(value) != value):
                 raise ValueError(f"{key} must be between {low} and {high}")
             value = float(value) if key == "volume" else int(value)
@@ -76,8 +84,9 @@ class Session:
         self.anchor_at = now + 0.20
         self.state = "playing"
         count_in = max(0, -self.anchor_beat) * 60 / self.settings["bpm"]
-        self.ends_at = (self.anchor_at + count_in + self.remaining
-                        if self.settings["timer_enabled"] else None)
+        self.ends_at = (
+            self.anchor_at + count_in + self.remaining if self.settings["timer_enabled"] else None
+        )
         return self._event("resumed" if resume else "started")
 
     def pause(self, now):
@@ -109,7 +118,9 @@ class Session:
     def configure(self, changes, now):
         changes = validate_settings(changes)
         locked = {"duration", "timer_enabled", "signature", "count_in"}
-        if self.state != "idle" and any(k in locked and v != self.settings[k] for k, v in changes.items()):
+        if self.state != "idle" and any(
+            k in locked and v != self.settings[k] for k, v in changes.items()
+        ):
             raise ValueError("Stop the metronome before changing timer, meter or count-in")
         position = self.position(now)
         old_bpm = self.settings["bpm"]
@@ -121,16 +132,23 @@ class Session:
             self.anchor_beat = position
             self.anchor_at = max(now, self.anchor_at)
             if position < 0 and self.ends_at is not None:
-                self.ends_at = self.anchor_at - position * 60 / self.settings["bpm"] + self.remaining
+                self.ends_at = (
+                    self.anchor_at - position * 60 / self.settings["bpm"] + self.remaining
+                )
         self.revision += 1
 
     def snapshot(self, now):
         return {
-            "settings": dict(self.settings), "state": self.state,
+            "settings": dict(self.settings),
+            "state": self.state,
             "phase": "count_in" if self.state != "idle" and self.position(now) < 0 else "running",
-            "session_id": self.session_id, "revision": self.revision,
-            "anchor_at": self.anchor_at, "anchor_beat": self.anchor_beat,
-            "ends_at": self.ends_at, "remaining": self.remaining_at(now),
-            "last_event": self.last_event, "server_time": now,
+            "session_id": self.session_id,
+            "revision": self.revision,
+            "anchor_at": self.anchor_at,
+            "anchor_beat": self.anchor_beat,
+            "ends_at": self.ends_at,
+            "remaining": self.remaining_at(now),
+            "last_event": self.last_event,
+            "server_time": now,
             "completed": self.completed,
         }

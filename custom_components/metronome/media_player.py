@@ -1,6 +1,11 @@
 """Primary media player: control plane for a selected foreground audio client."""
 
-from homeassistant.components.media_player import MediaPlayerEntity, MediaPlayerEntityFeature, MediaPlayerState
+from homeassistant.components.media_player import (
+    MediaPlayerEntity,
+    MediaPlayerEntityFeature,
+    MediaPlayerState,
+)
+
 from .entity import MetronomeEntity
 
 
@@ -14,16 +19,23 @@ class MetronomePlayer(MetronomeEntity, MediaPlayerEntity):
 
     @property
     def supported_features(self):
-        features = (MediaPlayerEntityFeature.PLAY | MediaPlayerEntityFeature.STOP |
-                    MediaPlayerEntityFeature.VOLUME_SET | MediaPlayerEntityFeature.VOLUME_MUTE)
+        features = (
+            MediaPlayerEntityFeature.PLAY
+            | MediaPlayerEntityFeature.STOP
+            | MediaPlayerEntityFeature.VOLUME_SET
+            | MediaPlayerEntityFeature.VOLUME_MUTE
+        )
         if self.settings["timer_enabled"]:
             features |= MediaPlayerEntityFeature.PAUSE
         return features
 
     @property
     def state(self):
-        return {"idle": MediaPlayerState.IDLE, "playing": MediaPlayerState.PLAYING,
-                "paused": MediaPlayerState.PAUSED}[self.coordinator.model.state]
+        return {
+            "idle": MediaPlayerState.IDLE,
+            "playing": MediaPlayerState.PLAYING,
+            "paused": MediaPlayerState.PAUSED,
+        }[self.coordinator.model.state]
 
     @property
     def volume_level(self):
@@ -42,8 +54,10 @@ class MetronomePlayer(MetronomeEntity, MediaPlayerEntity):
         model = self.coordinator.model
         return self.settings | {
             "output_ready": self.coordinator.owner is not None,
-            "output": "Current device", "session_id": model.session_id,
-            "ends_at": model.ends_at, "last_event": model.last_event,
+            "output": "Current device",
+            "session_id": model.session_id,
+            "ends_at": model.ends_at,
+            "last_event": model.last_event,
         }
 
     async def async_media_play(self):

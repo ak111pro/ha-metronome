@@ -1,11 +1,13 @@
 """Authenticated controls. Ownership is bound to a server-side WS connection."""
 
 import probatio as vol
+
 from homeassistant.auth.permissions.const import POLICY_CONTROL, POLICY_READ
 from homeassistant.components import websocket_api
 from homeassistant.core import callback
 from homeassistant.exceptions import HomeAssistantError, Unauthorized
 from homeassistant.helpers import entity_registry as er
+
 from .const import DOMAIN
 
 
@@ -27,10 +29,12 @@ def async_register_commands(hass):
     websocket_api.async_register_command(hass, control)
 
 
-@websocket_api.websocket_command({
-    vol.Required("type"): "metronome/subscribe",
-    vol.Required("entity_id"): str,
-})
+@websocket_api.websocket_command(
+    {
+        vol.Required("type"): "metronome/subscribe",
+        vol.Required("entity_id"): str,
+    }
+)
 @callback
 def subscribe(hass, connection, msg):
     coordinator = _resolve(hass, connection, msg["entity_id"], POLICY_READ)
@@ -42,13 +46,17 @@ def subscribe(hass, connection, msg):
     connection.send_event(msg["id"], coordinator.snapshot(token) | {"subscription": msg["id"]})
 
 
-@websocket_api.websocket_command({
-    vol.Required("type"): "metronome/control",
-    vol.Required("entity_id"): str,
-    vol.Required("action"): vol.In(["configure", "start", "stop", "pause", "claim", "heartbeat", "release"]),
-    vol.Optional("subscription"): int,
-    vol.Optional("settings"): dict,
-})
+@websocket_api.websocket_command(
+    {
+        vol.Required("type"): "metronome/control",
+        vol.Required("entity_id"): str,
+        vol.Required("action"): vol.In(
+            ["configure", "start", "stop", "pause", "claim", "heartbeat", "release"]
+        ),
+        vol.Optional("subscription"): int,
+        vol.Optional("settings"): dict,
+    }
+)
 @callback
 def control(hass, connection, msg):
     coordinator = _resolve(hass, connection, msg["entity_id"], POLICY_CONTROL)
