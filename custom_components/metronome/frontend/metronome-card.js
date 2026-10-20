@@ -470,7 +470,7 @@ export class MetronomeCard extends HTMLElement {
       b.setAttribute("aria-label",`${i ? "Increase" : "Decrease"} ${["hours","minutes","seconds"][this.selectedField]}`);
     });
     this.$(".timer-label").textContent = locked ? "Remaining" : "Timer";
-    this.$(".timer-hint").textContent = countIn ? "Starts after count-in" : state.state === "paused" ? "Paused · time saved" : state.state === "playing" ? this.finishLabel() : finished ? "Timer finished" : outside ? "Dial: 5–120 seconds. Use fields for other durations." : `${["Hours","Minutes","Seconds"][this.selectedField]} selected`;
+    this.$(".timer-hint").textContent = countIn ? "Starts after count-in" : state.state === "paused" ? "Paused · time saved" : state.state === "playing" ? this.finishLabel() : finished ? "Timer finished" : outside ? "Dial: 5 s – 2 min" : `${["Hours","Minutes","Seconds"][this.selectedField]} selected`;
   }
 
   pulse(beat, countIn = false) {
