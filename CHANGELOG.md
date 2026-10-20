@@ -1,5 +1,22 @@
 # Changelog
 
+## 0.1.0-alpha.6 (unreleased)
+
+From the owner's alpha.5 re-test.
+
+### Added
+
+- Count-in state: the card says "Count-in" until the first exercise beat, then "Active";
+  `media_player` attribute `phase` (`count_in` / `running`, `null` when idle) is flipped by
+  HA at the end of the count-in. The state stays `playing`.
+
+### Changed
+
+- The BPM and timer dials move only when the handle is dragged (48 px hit circle); a tap
+  or swipe on the arc changes nothing, and a swipe there scrolls the page or dialog.
+- Expanded dialog: the close button is on the title row and the dial starts right below the
+  title.
+
 ## 0.1.0-alpha.5 (unreleased)
 
 From the owner's alpha.3/alpha.4 re-test.

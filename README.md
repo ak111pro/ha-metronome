@@ -1,6 +1,6 @@
 # Home Assistant Metronome
 
-**0.1.0-alpha.5 · native Tile play and a Tile-style compact card after the Android re-tests; still for review and device testing**
+**0.1.0-alpha.6 · count-in state, handle-only dials and a tighter dialog after the Android re-tests; still for review and device testing**
 
 A custom integration and dashboard card that play a metronome on the foreground phone or browser. Target environment: Home Assistant Core **2026.10.1**, Docker on a Raspberry Pi 4 (8 GB), with Android and iOS Companion apps.
 
@@ -23,7 +23,7 @@ This repository contains the integration, the card, installation examples, an HA
 3. Add a dashboard resource of type **JavaScript module** with this URL:
 
    ```text
-   /metronome/metronome-card.js?v=0.1.0-alpha.5
+   /metronome/metronome-card.js?v=0.1.0-alpha.6
    ```
 
    Dashboard resources may require Advanced Mode in the user profile. For YAML-managed resources, use `examples/resource.yaml` in the existing Lovelace resources configuration. Do not create a second conflicting Lovelace configuration.

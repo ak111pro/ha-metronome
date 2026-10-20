@@ -1,16 +1,23 @@
 # Validation record and next-stage test plan
 
-## Status (2026-10-21, 0.1.0-alpha.5)
+## Status (2026-10-21, 0.1.0-alpha.6)
 
 | Area | Status |
 | --- | --- |
-| Backend in HA (pytest) | **Verified**: 70 tests, HA 2026.10.1 harness |
+| Backend in HA (pytest) | **Verified**: 74 tests, HA 2026.10.1 harness |
 | hassfest 2026.10.1 | **Passes** without warnings (run locally) |
 | HACS action | Not run yet (needs the GitHub repository) |
 | Live HA instance (websocket, REST, restart) | **Verified** on the ha-dev test instance (HA 2026.10.2) |
 | Card in a real browser | **Rendered and driven** in headless Chromium 155 (no audible output) |
-| Android Companion app | **Owner tests** (Galaxy S21 Ultra, 2026-10-20): alpha.1 audio and vibration work (vibration needs the phone out of Samsung "Mute" mode); alpha.2 re-test confirmed its fixes and asked for the changes in alpha.3 (below); alpha.3/alpha.4 re-test passed except the requests done in alpha.5 (below); alpha.5 re-test pending |
+| Android Companion app | **Owner tests** (Galaxy S21 Ultra, 2026-10-20): alpha.1 audio and vibration work (vibration needs the phone out of Samsung "Mute" mode); alpha.2 re-test confirmed its fixes and asked for the changes in alpha.3 (below); alpha.3/alpha.4 re-test passed except the requests done in alpha.5 (below); alpha.5 re-test: Tile play and compact card OK, three requests done in alpha.6 (below); alpha.6 re-test pending |
 | iOS Companion app, audio timing, accessibility | **Not tested** — needs real devices |
+
+### Owner's Android re-test of alpha.5
+
+Requests, done in alpha.6: "in expanded view a lot space is wasted at the top" (and the timer
+arc looked cut off at the dialog's bottom); "Metronome should have a new state when counting
+in"; "the bpm and timer bars should be only adjustable via dragging handle and not by tapping
+on the bar, to avoid accidental adjustment".
 
 ### Owner's Android re-test of alpha.3/alpha.4
 
@@ -68,6 +75,9 @@ Covered from the list below:
   12–15 s after the last heartbeat, stale lease rejects start, wrong and unloaded entities,
   read-only viewer (subscribe yes, every control `unauthorized`), ordinary non-admin user can
   play, two instances with separate owners, expected rejections not logged as HA errors.
+- Count-in phase: `phase` attribute flips once at the end of the count-in (state stays
+  `playing`), `running` without count-in, pause and stop during count-in leave no stale flip,
+  tempo changes during count-in move the flip earlier or later.
 - Gesture arming (`tests/test_gesture.py`): a page that sent `metronome/arm` takes output on
   the same user's native play within 3 s, even over a ready owner; no gesture keeps the ready
   owner; arm expires; another user's gesture is ignored; automations (no user) unchanged;
@@ -129,7 +139,9 @@ re-run for alpha.3 where noted:
 | `timer_drag.py` (alpha.3) | Timer fields sampled 20 ms after each touch move follow the handle; after release fields = HA value with no flick back; BPM drag for comparison | 20/20 live (before: 0/20), BPM 10/10 |
 | `native_play.py` (alpha.5) | View with only a native Tile: mouse and touch tap on the Tile's Play, and more-info Play after a reload, start audio on a page that never tapped Start (shared AudioContext running, tones scheduled, HA playing, page owner); service call without gesture fails helpfully; idle context suspends ~5 s after a gesture | 9/9 |
 | `compact.py` (alpha.5) | Tile-style compact card at 264–500 px (36 px icon circle, 42 px / 12 px-radius features, nothing outside, no expand button, inline beside the name above 340 px, else bottom); icon/name button opens the dialog by Enter and tap; BPM pulse keyframes per feedback mode, accent stronger, count-in colour, reduced motion without scale; real session from the Tile pulses the number | all pass |
-| `count_in.py` | Count-in dots/glow in `--accent-color`, exercise beats in the active colour, also with reduced motion | passes |
+| `dialog.py` (alpha.6) | Expanded dialog at 360x800, 384x854, 412x915 and 360x640, light/dark, timer open: X on the title row, dial 56 px below the top, timer fits or a swipe on an arc scrolls to its end; Advanced header clear of the X and scrollable | 32/32 |
+| `handle_only.py` (alpha.6) | BPM and timer dial: tap/click on the track and a tap on the handle change nothing (HA value, number/fields, knob); swipe from the track scrolls; handle drag changes the value without scrolling | 10/10 (old build 4/10) |
+| `count_in.py` | Count-in dots/glow in `--accent-color`, exercise beats in the active colour, also with reduced motion; status "Count-in" → "Active" (full and compact), HA `phase` count_in → running with state `playing` (alpha.6) | passes |
 
 The iOS path is simulated (no `navigator.vibrate`, a stub external bus); HA's frontend
 forwarding of the `haptic` event to the app was read from frontend 20260930.4
