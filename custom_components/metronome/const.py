@@ -1,7 +1,7 @@
 """Constants for the Metronome integration."""
 
 DOMAIN = "metronome"
-VERSION = "0.1.0-alpha.4"
+VERSION = "0.1.0-alpha.5"
 PLATFORMS = ["media_player", "number", "select", "switch", "event", "sensor"]
 EVENT_TYPES = ["started", "paused", "resumed", "stopped", "finished", "interrupted"]
 SIGNATURES = {"2/4": 2, "3/4": 3, "4/4": 4, "6/8": 2}

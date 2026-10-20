@@ -1,16 +1,23 @@
 # Validation record and next-stage test plan
 
-## Status (2026-10-20, 0.1.0-alpha.3)
+## Status (2026-10-21, 0.1.0-alpha.5)
 
 | Area | Status |
 | --- | --- |
-| Backend in HA (pytest) | **Verified**: 61 tests, HA 2026.10.1 harness |
+| Backend in HA (pytest) | **Verified**: 70 tests, HA 2026.10.1 harness |
 | hassfest 2026.10.1 | **Passes** without warnings (run locally) |
 | HACS action | Not run yet (needs the GitHub repository) |
 | Live HA instance (websocket, REST, restart) | **Verified** on the ha-dev test instance (HA 2026.10.2) |
 | Card in a real browser | **Rendered and driven** in headless Chromium 155 (no audible output) |
-| Android Companion app | **Owner tests** (Galaxy S21 Ultra, 2026-10-20): alpha.1 audio and vibration work (vibration needs the phone out of Samsung "Mute" mode); alpha.2 re-test confirmed its fixes and asked for the changes in alpha.3 (below); alpha.3 re-test pending |
+| Android Companion app | **Owner tests** (Galaxy S21 Ultra, 2026-10-20): alpha.1 audio and vibration work (vibration needs the phone out of Samsung "Mute" mode); alpha.2 re-test confirmed its fixes and asked for the changes in alpha.3 (below); alpha.3/alpha.4 re-test passed except the requests done in alpha.5 (below); alpha.5 re-test pending |
 | iOS Companion app, audio timing, accessibility | **Not tested** — needs real devices |
+
+### Owner's Android re-test of alpha.3/alpha.4
+
+Passed apart from these requests, done in alpha.5: "metronome can't be played from the tile
+card, if not activated before"; compact view should look like the Tile card, with an inline
+option for the first button row; the BPM number should pulse and glow while active; no
+maximize button, tapping the card should open it.
 
 ### Owner's Android re-test of alpha.2 (Galaxy S21 Ultra, Companion app, ha-dev)
 
@@ -61,6 +68,11 @@ Covered from the list below:
   12–15 s after the last heartbeat, stale lease rejects start, wrong and unloaded entities,
   read-only viewer (subscribe yes, every control `unauthorized`), ordinary non-admin user can
   play, two instances with separate owners, expected rejections not logged as HA errors.
+- Gesture arming (`tests/test_gesture.py`): a page that sent `metronome/arm` takes output on
+  the same user's native play within 3 s, even over a ready owner; no gesture keeps the ready
+  owner; arm expires; another user's gesture is ignored; automations (no user) unchanged;
+  helpful error without any owner; a paused session resumes on its owner; arming without a
+  subscription does nothing.
 - `output_user` in the snapshot names the HA user whose page holds the output, follows a
   hand-off and clears on release; it is not an entity attribute.
 - Static module: every frontend file is served with a JavaScript content type, nothing outside
@@ -115,6 +127,8 @@ re-run for alpha.3 where noted:
 | `timer_text.py` (alpha.3) | Every text line in the timer dial (Range rects; input digits) inside the arc's inner circle (r 133/320 − 2 px) and below the −1/+1 buttons; card widths 264–500 px; 100 % and 130 % text (Android text zoom emulated by scaling all font sizes); 30:00:32, 45 s, longest finish label | 0 of 36 outside (before: 12 of 24, worst 146 px vs 131 px) |
 | `output.py` (alpha.3) | Title only (no device line); Advanced → Output on two pages: No device / This device / Another device (user), Play on this device without Start, disabled while the other page plays, compact line "Active on another device", hand-off | 9/9 |
 | `timer_drag.py` (alpha.3) | Timer fields sampled 20 ms after each touch move follow the handle; after release fields = HA value with no flick back; BPM drag for comparison | 20/20 live (before: 0/20), BPM 10/10 |
+| `native_play.py` (alpha.5) | View with only a native Tile: mouse and touch tap on the Tile's Play, and more-info Play after a reload, start audio on a page that never tapped Start (shared AudioContext running, tones scheduled, HA playing, page owner); service call without gesture fails helpfully; idle context suspends ~5 s after a gesture | 9/9 |
+| `compact.py` (alpha.5) | Tile-style compact card at 264–500 px (36 px icon circle, 42 px / 12 px-radius features, nothing outside, no expand button, inline beside the name above 340 px, else bottom); icon/name button opens the dialog by Enter and tap; BPM pulse keyframes per feedback mode, accent stronger, count-in colour, reduced motion without scale; real session from the Tile pulses the number | all pass |
 | `count_in.py` | Count-in dots/glow in `--accent-color`, exercise beats in the active colour, also with reduced motion | passes |
 
 The iOS path is simulated (no `navigator.vibrate`, a stub external bus); HA's frontend
