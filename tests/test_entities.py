@@ -166,7 +166,7 @@ async def test_structural_settings_locked_while_active(
 
 
 async def test_media_actions_before_any_client(hass: HomeAssistant, loaded) -> None:
-    with pytest.raises(HomeAssistantError, match="Tap Start in the metronome card"):
+    with pytest.raises(HomeAssistantError, match="No device is ready to play. Tap Start once"):
         await _call(hass, "media_player", "media_play", PLAYER)
     assert hass.states.get(PLAYER).state == "idle"
     # Stop is harmless while idle; volume works without a client.
@@ -189,7 +189,7 @@ async def test_media_actions_after_client_claimed(hass: HomeAssistant, owner) ->
     # After the client goes away, native play fails again with a helpful message.
     await ws.unsubscribe(sub)
     assert hass.states.get(PLAYER).attributes["output_ready"] is False
-    with pytest.raises(HomeAssistantError, match="Tap Start"):
+    with pytest.raises(HomeAssistantError, match="No device is ready to play"):
         await _call(hass, "media_player", "media_play", PLAYER)
 
 

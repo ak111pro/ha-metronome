@@ -15,6 +15,12 @@ from .model import Session
 
 _LOGGER = logging.getLogger(__name__)
 
+# Native actions cannot unlock browser audio; they need a page that tapped Start.
+NO_OUTPUT = (
+    "No device is ready to play. Tap Start once in the metronome card on the phone or "
+    "browser that should play, and keep that page open"
+)
+
 
 class MetronomeCoordinator:
     def __init__(self, hass, entry):
@@ -117,9 +123,7 @@ class MetronomeCoordinator:
                     self.owner is None
                     or monotonic() - self.clients[self.owner]["seen"] > LEASE_SECONDS
                 ):
-                    raise ValueError(
-                        "Tap Start in the metronome card to enable audio on a foreground device"
-                    )
+                    raise ValueError(NO_OUTPUT)
                 event = self.model.start(now)
             elif action == "pause":
                 event = self.model.pause(now)

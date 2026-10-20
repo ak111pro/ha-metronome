@@ -22,6 +22,10 @@ class Player extends EventTarget {
     this.visuals = new Set();
     this.serverOffset = Date.now() / 1000 - performance.now() / 1000;
     this.readyForAudio = false;
+    // True once Start was tapped in this page load (audio unlocked by a user gesture).
+    // An armed page re-selects itself after it was hidden or reconnected, as long as no
+    // other device took over; a page that never tapped Start is never selected.
+    this.armed = false;
     this.pulse = 20;
     this.vibration = false;
     this.lastFinished = null;
@@ -43,6 +47,7 @@ class Player extends EventTarget {
     }, 3000);
     document.addEventListener("visibilitychange", () => {
       if (document.hidden) this.interrupt();
+      else this.rearm();
     });
     window.addEventListener("pagehide", () => this.interrupt());
     connection.addEventListener("disconnected", () => this.interrupt("Connection lost. Tap Start to reconnect audio."));
@@ -70,7 +75,9 @@ class Player extends EventTarget {
   }
 
   receive(state) {
+    let resubscribed = false;
     if (state.subscription != null) {
+      resubscribed = this.subscription != null && this.subscription !== state.subscription;
       this.subscription = state.subscription;
       this.serverOffset = state.server_time - performance.now() / 1000;
       this.resolveReady();
@@ -87,10 +94,39 @@ class Player extends EventTarget {
       if (state.state === "playing" && state.is_owner && this.readyForAudio && !document.hidden) this.schedule();
     }
     if (previous?.state === "playing" && state.state === "idle" && state.last_event === "finished" && state.is_owner) this.finished();
-    if (state.is_owner && !this.readyForAudio) {
+    if (state.is_owner && !this.readyForAudio && !this.rearming) {
       this.send("release").catch(() => {});
     }
     this.emit("change", state);
+    // After a websocket reconnect the server has a new subscription and no owner.
+    if (resubscribed || (!this.readyForAudio && !state.output_ready)) this.rearm();
+  }
+
+  /* Re-select this page as output without a new tap, only if it was unlocked by Start
+   * earlier, is visible, and no other device is selected. Browsers keep the user
+   * activation for the page, so resume() normally succeeds; if it does not, the page
+   * simply stays unselected and asks for Start again. */
+  async rearm() {
+    if (!this.armed || this.readyForAudio || this.rearming || document.hidden) return;
+    if (!this.state || this.subscription == null || this.state.state !== "idle") return;
+    if (this.state.output_ready && !this.state.is_owner) return;
+    if (!this.audio || this.audio.state === "closed") return;
+    // At most one automatic attempt every 2 s, so a flapping audio device cannot loop.
+    if (performance.now() - (this.lastRearm || -Infinity) < 2000) return;
+    this.lastRearm = performance.now();
+    this.rearming = true;
+    try {
+      if (this.audio.state !== "running") await this.audio.resume();
+      if (this.audio.state !== "running" || document.hidden) return;
+      this.readyForAudio = true;
+      await this.send("claim");
+      this.error = "";
+      this.emit("change", this.state);
+    } catch (_) {
+      this.readyForAudio = !!this.state?.is_owner;
+    } finally {
+      this.rearming = false;
+    }
   }
 
   async start() {
@@ -103,12 +139,14 @@ class Player extends EventTarget {
       this.master.connect(this.audio.destination);
       this.audio.addEventListener("statechange", () => {
         if (this.readyForAudio && this.audio.state !== "running") this.interrupt("Audio was interrupted. Tap Start to enable it again.");
+        else if (this.audio.state === "running") this.rearm();
       });
     }
     await this.audio.resume();
     if (this.audio.state !== "running") throw new Error("Tap Start again to allow audio on this device");
     await this.ready;
     this.readyForAudio = true;
+    this.armed = true;
     this.error = "";
     try {
       await this.send("claim");

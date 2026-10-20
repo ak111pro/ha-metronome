@@ -46,7 +46,9 @@ There is no separate audio dependency, Node build step or software to install on
 
 After that gesture, native HA controls and automations can control that selected, connected client. They cannot unlock audio in a fresh browser, choose a remote phone implicitly, or start a closed Companion app. The selected client remains ready after Stop while its page stays visible. Opening the card elsewhere does not duplicate sound. To move output while a session is active or paused, stop it first, then tap Start on the other device.
 
-Leaving the app, locking the screen, losing the connection or suspending its audio interrupts playback. There is no background-playback guarantee and no automatic resumption. A heartbeat lease provides a server-side fallback if a client vanishes. Navigation between dashboard views within the same visible HA page keeps the engine alive.
+Leaving the app, locking the screen, losing the connection or suspending its audio interrupts playback. There is no background-playback guarantee and no automatic resumption of a session. A heartbeat lease provides a server-side fallback if a client vanishes. Navigation between dashboard views, the compact card's dialog, HA more-info dialogs and other HA pages (for example the device page) within the same HA page keep the engine and the selection alive.
+
+When a page that already tapped Start becomes visible again or its connection to HA comes back, it selects itself again as output **without** a new tap, provided no other device was selected meanwhile and the browser lets it resume audio. Playback itself does not resume. If the browser refuses (for example after an OS audio interruption), the card asks for Start again. A page that never tapped Start is never selected.
 
 ## Timer behavior
 
