@@ -4,7 +4,7 @@
 
 A custom integration and dashboard card that play a metronome on the foreground phone or browser. Target environment: Home Assistant Core **2026.10.1**, Docker on a Raspberry Pi 4 (8 GB), with Android and iOS Companion apps.
 
-This package contains implementation source, installation examples, limited local checks and an [Opus handoff](docs/HANDOFF.md). It has **not been installed in Home Assistant or tested on either Companion app**. It is not yet a verified public release or a HACS package. No repository was created and no running HA installation was changed.
+This repository contains the integration, the card, installation examples, an HA test suite and the original [handoff](docs/HANDOFF.md). The backend is tested with Home Assistant 2026.10.1 and was run on a test instance; the card has been rendered in a desktop browser. It has **not yet been tested on either Companion app** (see [TESTING.md](docs/TESTING.md)). It is not yet a public release or a HACS package.
 
 ## What is included
 
@@ -99,6 +99,9 @@ The backend is Python using HA's APIs. Frontend modules have no build dependenci
 ```sh
 python3 checks/check_model.py
 node checks/check_frontend.mjs
+pip install -r requirements_test.txt   # Python 3.14
+pytest -q
+ruff check custom_components tests checks && ruff format --check custom_components tests checks
 ```
 
-The first checks cover pure countdown/state transitions and frontend math. They do not test HA startup, websocket permissions, actual audio accuracy or Companion behavior. Read [TESTING.md](docs/TESTING.md) before promoting this alpha. The next owner must supply real repository/documentation/issue links and codeowners, select a licence, and complete HACS metadata if publishing through HACS.
+The two small checks cover pure countdown/state transitions and frontend math. `tests/` runs the integration inside Home Assistant (config flow, lifecycle, entities, countdown with frozen time, websocket ownership and permissions). None of them measure audio accuracy or Companion behavior. Read [TESTING.md](docs/TESTING.md) before promoting this alpha. A licence has not been chosen yet.

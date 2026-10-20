@@ -59,4 +59,6 @@ Settings live in HA Store under `metronome.<entry_id>`, delayed by one second to
 
 Only the initial module is manually registered as a dashboard resource. Relative module imports are included in the integration directory. No external JS, fonts or audio files are fetched. Reload the frontend after an integration reload; automatic subscription reattachment following config-entry unload/reload is a follow-up task. Registry objects are page-lived, so deliberate unloading/re-adding an instance also requires a frontend refresh in this alpha.
 
-The manifest is suitable as a local development manifest and deliberately has no invented repository URL or codeowner. Publishing checks such as Hassfest/HACS are expected to need additional metadata. The HA 2026.10.1 source uses `probatio` for schemas; this package targets that API and does not promise backward compatibility.
+The manifest carries the repository links and codeowner and passes hassfest 2026.10.1; `hacs.json` sets the minimum HA version to 2026.10.1. The HA 2026.10.1 source uses `probatio` for schemas; this package targets that API and does not promise backward compatibility.
+
+Expected rejections (claim while another device plays, stale subscription, locked setting, wrong entity) are `ServiceValidationError`s. The websocket commands answer them with an error result (`home_assistant_error`) without logging; native entity actions report them as validation errors. `Unauthorized` is raised and logged as in HA core.
