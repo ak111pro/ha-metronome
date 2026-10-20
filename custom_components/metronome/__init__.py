@@ -3,15 +3,17 @@
 from pathlib import Path
 
 from homeassistant.components.http import StaticPathConfig
+from homeassistant.helpers import config_validation as cv
 from homeassistant.helpers.storage import Store
 
 from .const import DOMAIN, PLATFORMS
 from .coordinator import MetronomeCoordinator
 from .websocket import async_register_commands
 
+CONFIG_SCHEMA = cv.config_entry_only_config_schema(DOMAIN)
+
 
 async def async_setup(hass, config):
-    hass.data.setdefault(DOMAIN, {})
     await hass.http.async_register_static_paths(
         [StaticPathConfig("/metronome", str(Path(__file__).parent / "frontend"), False)]
     )
@@ -22,8 +24,9 @@ async def async_setup(hass, config):
 async def async_setup_entry(hass, entry):
     coordinator = MetronomeCoordinator(hass, entry)
     await coordinator.async_load()
+    # Runs on unload and also when the platform setup below fails.
+    entry.async_on_unload(coordinator.async_cancel_timers)
     entry.runtime_data = coordinator
-    hass.data[DOMAIN][entry.entry_id] = coordinator
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
     return True
 
@@ -31,7 +34,6 @@ async def async_setup_entry(hass, entry):
 async def async_unload_entry(hass, entry):
     if await hass.config_entries.async_unload_platforms(entry, PLATFORMS):
         await entry.runtime_data.async_unload()
-        hass.data[DOMAIN].pop(entry.entry_id, None)
         return True
     return False
 

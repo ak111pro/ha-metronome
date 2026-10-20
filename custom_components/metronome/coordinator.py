@@ -163,12 +163,18 @@ class MetronomeCoordinator:
         ):
             self.release(self.owner)
 
+    @callback
+    def async_cancel_timers(self):
+        if self._finish_cancel:
+            self._finish_cancel()
+            self._finish_cancel = None
+        if self._lease_cancel:
+            self._lease_cancel()
+            self._lease_cancel = None
+
     async def async_unload(self):
         self.owner = None
         self._notify(self.model.stop("interrupted"))
-        if self._finish_cancel:
-            self._finish_cancel()
-        if self._lease_cancel:
-            self._lease_cancel()
+        self.async_cancel_timers()
         self.clients.clear()
         await self._store.async_save(dict(self.model.settings))

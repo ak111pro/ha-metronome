@@ -6,6 +6,7 @@ import probatio as vol
 
 from homeassistant.auth.permissions.const import POLICY_CONTROL, POLICY_READ
 from homeassistant.components import websocket_api
+from homeassistant.config_entries import ConfigEntryState
 from homeassistant.core import callback
 from homeassistant.exceptions import ServiceValidationError, Unauthorized
 from homeassistant.helpers import entity_registry as er
@@ -19,10 +20,10 @@ def _resolve(hass, connection, entity_id, policy):
     item = er.async_get(hass).async_get(entity_id)
     if item is None or item.platform != DOMAIN or item.domain != "media_player":
         raise ServiceValidationError("Select a Metronome media player entity")
-    coordinator = hass.data[DOMAIN].get(item.config_entry_id)
-    if coordinator is None:
+    entry = hass.config_entries.async_get_entry(item.config_entry_id)
+    if entry is None or entry.state is not ConfigEntryState.LOADED:
         raise ServiceValidationError("Metronome is unavailable")
-    return coordinator
+    return entry.runtime_data
 
 
 def _expected_errors(handler):
