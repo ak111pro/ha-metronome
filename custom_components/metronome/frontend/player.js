@@ -1,7 +1,7 @@
 /* A single engine per HA connection/entity, independent of card attachment.
  * No audio is generated on the HA host. WS sends session changes, never beats.
  */
-import {METERS, HAPTIC_TYPES, TONES, TONE_TAIL, masterGain, beatPosition, hapticMode} from "./shared.js?v=0.1.0-beta.7";
+import {METERS, HAPTIC_TYPES, TONES, TONE_TAIL, masterGain, beatPosition, hapticMode} from "./shared.js?v=0.1.0-beta.8";
 
 const REGISTRY = Symbol.for("metronome.players.v1");
 globalThis[REGISTRY] ||= new WeakMap();

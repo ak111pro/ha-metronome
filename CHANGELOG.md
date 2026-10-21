@@ -1,11 +1,14 @@
 # Changelog
 
-## 0.1.0-beta.7 (unreleased)
+## 0.1.0-beta.8 (2026-10-21)
 
-0.1.0-beta.3 to 0.1.0-beta.6 were never released; their changes are part of this version
+0.1.0-beta.3 to 0.1.0-beta.7 were never released; their changes are part of this version
 (the version moved on so phones do not keep cached card files).
 
 ### Changed
+
+- Compact card: no tap-highlight flash over the whole card when a button (e.g. −/+) is tapped
+  on Android.
 
 - Expanded dialog: the close button sits at the top left like HA's more-info dialog, with
   the title next to it, and its focus ring stays inside the dialog. In the Advanced view Back
