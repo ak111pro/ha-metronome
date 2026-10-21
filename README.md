@@ -4,7 +4,7 @@
 [![Tests](https://github.com/ak111pro/ha-metronome/actions/workflows/tests.yml/badge.svg)](https://github.com/ak111pro/ha-metronome/actions/workflows/tests.yml)
 [![HACS Custom](https://img.shields.io/badge/HACS-Custom-orange.svg)](https://hacs.xyz)
 [![Release](https://img.shields.io/github/v/release/ak111pro/ha-metronome?include_prereleases)](https://github.com/ak111pro/ha-metronome/releases)
-[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://github.com/ak111pro/ha-metronome/blob/main/LICENSE)
 
 **0.1.0-beta.1 · beta, experimental · AI-assisted (built with Codex and Claude) · MIT licence**
 
@@ -18,21 +18,21 @@ the foreground device (Web Audio), not on the server.
 
 **Tested on** Home Assistant 2026.10.1 (test suite) and 2026.10.2 (live), with the Companion
 app on an Android phone (Samsung Galaxy S21 Ultra), an iPhone 14 (iOS 27.0.1) and an iPad Pro
-(iPadOS 26.7.1), plus desktop Chromium. Details in [TESTING.md](docs/TESTING.md). This is a
+(iPadOS 26.7.1), plus desktop Chromium. Details in [TESTING.md](https://github.com/ak111pro/ha-metronome/blob/main/docs/TESTING.md). This is a
 beta: expect rough edges, and please report issues.
 
 ## Screenshots
 
 <table>
   <tr>
-    <td align="center"><img src="docs/images/full-idle-light.png" width="260" alt="Full card, idle, light theme: tempo dial at 96 BPM with Tap, transport row and timer dial"><br><sub>Full card · idle · light</sub></td>
-    <td align="center"><img src="docs/images/full-playing-dark.png" width="260" alt="Full card playing in dark theme: Active status, beat dots and the timer counting down with its finish time"><br><sub>Playing with timer · dark</sub></td>
-    <td align="center"><img src="docs/images/advanced-dark.png" width="260" alt="Advanced view: rhythm, sound, output, haptics and diagnostics settings"><br><sub>Advanced settings</sub></td>
+    <td align="center"><img src="https://raw.githubusercontent.com/ak111pro/ha-metronome/main/docs/images/full-idle-light.png" width="260" alt="Full card, idle, light theme: tempo dial at 96 BPM with Tap, transport row and timer dial"><br><sub>Full card · idle · light</sub></td>
+    <td align="center"><img src="https://raw.githubusercontent.com/ak111pro/ha-metronome/main/docs/images/full-playing-dark.png" width="260" alt="Full card playing in dark theme: Active status, beat dots and the timer counting down with its finish time"><br><sub>Playing with timer · dark</sub></td>
+    <td align="center"><img src="https://raw.githubusercontent.com/ak111pro/ha-metronome/main/docs/images/advanced-dark.png" width="260" alt="Advanced view: rhythm, sound, output, haptics and diagnostics settings"><br><sub>Advanced settings</sub></td>
   </tr>
   <tr>
-    <td align="center"><img src="docs/images/compact-tile-light.png" width="260" alt="Compact cards (bottom and inline) next to native HA Tile cards, light theme"><br><sub>Compact (bottom / inline) next to native Tiles</sub></td>
-    <td align="center"><img src="docs/images/compact-tile-dark.png" width="260" alt="Compact cards next to native Tile cards, dark theme"><br><sub>Compact · dark</sub></td>
-    <td align="center"><img src="docs/images/full-idle-dark.png" width="260" alt="Full card, idle, dark theme"><br><sub>Full card · idle · dark</sub></td>
+    <td align="center"><img src="https://raw.githubusercontent.com/ak111pro/ha-metronome/main/docs/images/compact-tile-light.png" width="260" alt="Compact cards (bottom and inline) next to native HA Tile cards, light theme"><br><sub>Compact (bottom / inline) next to native Tiles</sub></td>
+    <td align="center"><img src="https://raw.githubusercontent.com/ak111pro/ha-metronome/main/docs/images/compact-tile-dark.png" width="260" alt="Compact cards next to native Tile cards, dark theme"><br><sub>Compact · dark</sub></td>
+    <td align="center"><img src="https://raw.githubusercontent.com/ak111pro/ha-metronome/main/docs/images/full-idle-dark.png" width="260" alt="Full card, idle, dark theme"><br><sub>Full card · idle · dark</sub></td>
   </tr>
 </table>
 
@@ -273,7 +273,7 @@ pytest -q
 ruff check custom_components tests checks && ruff format --check custom_components tests checks
 ```
 
-The two small checks cover pure countdown/state transitions and frontend math. `tests/` runs the integration inside Home Assistant (config flow, lifecycle, entities, countdown with frozen time, websocket ownership and permissions). None of them measure audio accuracy or Companion behavior. Read [TESTING.md](docs/TESTING.md) before relying on it; device results are summarised there. Licensed under the MIT licence (see [LICENSE](LICENSE)).
+The two small checks cover pure countdown/state transitions and frontend math. `tests/` runs the integration inside Home Assistant (config flow, lifecycle, entities, countdown with frozen time, websocket ownership and permissions). None of them measure audio accuracy or Companion behavior. Read [TESTING.md](https://github.com/ak111pro/ha-metronome/blob/main/docs/TESTING.md) before relying on it; device results are summarised there. Licensed under the MIT licence (see [LICENSE](https://github.com/ak111pro/ha-metronome/blob/main/LICENSE)).
 
 ## Credits
 
