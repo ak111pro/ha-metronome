@@ -1,6 +1,7 @@
 {
   "domain": "metronome",
   "name": "Metronome",
+  "after_dependencies": ["lovelace"],
   "codeowners": ["@ak111pro"],
   "config_flow": true,
   "dependencies": ["http", "websocket_api"],

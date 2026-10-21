@@ -8,6 +8,7 @@ from homeassistant.helpers.storage import Store
 
 from .const import DOMAIN, PLATFORMS
 from .coordinator import MetronomeCoordinator
+from .resource import async_register_card, async_unregister_card
 from .websocket import async_register_commands
 
 CONFIG_SCHEMA = cv.config_entry_only_config_schema(DOMAIN)
@@ -22,6 +23,7 @@ async def async_setup(hass, config):
 
 
 async def async_setup_entry(hass, entry):
+    await async_register_card(hass)  # once per HA start, see resource.py
     coordinator = MetronomeCoordinator(hass, entry)
     await coordinator.async_load()
     # Runs on unload and also when the platform setup below fails.
@@ -40,3 +42,5 @@ async def async_unload_entry(hass, entry):
 
 async def async_remove_entry(hass, entry):
     await Store(hass, 1, f"{DOMAIN}.{entry.entry_id}").async_remove()
+    if not [e for e in hass.config_entries.async_entries(DOMAIN) if e.entry_id != entry.entry_id]:
+        await async_unregister_card(hass)
