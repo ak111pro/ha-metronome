@@ -197,11 +197,12 @@ async def main():
             c["ctx"] == "running" and c["tones"] >= b["tones"] + 3 and c["msg"],
             c,
         )
-        # Diagnostics while playing.
+        # Diagnostics while playing (behind the "Show diagnostics" toggle since alpha.9).
         await cdp.js(
             f"{R}.querySelector('[data-action=advanced]').click(); 1",
             gesture=True,
         )
+        await cdp.js(f"{R}.querySelector('[data-toggle=diagnostics]').click(); 1", gesture=True)
         await cdp.idle(0.8)
         diag = await cdp.js(
             f"[...{R}.querySelectorAll('.diag dt')].map(d => d.textContent + ': ' + d.nextElementSibling.textContent)"

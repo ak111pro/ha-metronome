@@ -133,7 +133,7 @@ export class MetronomeCard extends HTMLElement {
           <div class="settings-label">Sound</div><div class="volume-label"><span id="volume-label">Volume</span><output></output></div><div class="volume-wrap" role="slider" tabindex="0" aria-labelledby="volume-label" aria-valuemin="0" aria-valuemax="100"><div class="volume-fill" aria-hidden="true"><span class="volume-marker"></span></div></div>${tile("muted","Mute","volume-off")}
           <div class="settings-label">Output</div><div class="output"><div class="output-status" role="status">${icon("volume-high")}<span class="output-device"></span></div><button type="button" class="tile output-claim" data-action="claim">${icon("cellphone-arrow-down")}<span>Play on this device</span></button><div class="note output-note"></div></div>
           <div class="haptics"><div class="settings-label">Haptics</div><div class="grid">${tile("vibration","Vibration","vibrate")}${picker("pulse")}</div><div class="note haptics-note"></div><button type="button" class="tile haptic-test" data-action="test-haptic">${icon("vibrate")}<span>Test vibration</span></button></div>
-          <div class="diagnostics"><div class="settings-label">Diagnostics</div><dl class="diag"></dl></div>
+          <div class="settings-label">Diagnostics</div>${tile("diagnostics","Show diagnostics","stethoscope")}<div class="diagnostics" hidden><dl class="diag"></dl></div>
         </div>
       </section><div class="message" role="status" hidden></div>
       </ha-card>`;
@@ -207,6 +207,7 @@ export class MetronomeCard extends HTMLElement {
     if (target.dataset.toggle && state) {
       const key = target.dataset.toggle;
       if (key === "vibration") { this.player.vibration = !this.player.vibration; this.update(); }
+      else if (key === "diagnostics") { this.player.showDiagnostics = !this.player.showDiagnostics; this.update(); this.updateDiagnostics(true); }
       else this.patch({[key]: !state.settings[key]});
       return;
     }
@@ -372,10 +373,13 @@ export class MetronomeCard extends HTMLElement {
     });
   }
   // Advanced → Diagnostics (collapsed): what the next phone test needs to see.
-  // Always visible (a <details> with a flex <summary> did not open on iOS WebKit); refreshed
-  // about once a second while Advanced is shown.
+  // Behind "Show diagnostics" (off by default, per page); refreshed about once a second while
+  // shown. A plain toggle: a <details> with a flex <summary> did not open on iOS WebKit.
   updateDiagnostics(force = false) {
-    if (!this.$(".diagnostics") || !this.player) return;
+    const box = this.$(".diagnostics");
+    if (!box || !this.player) return;
+    box.hidden = !this.player.showDiagnostics;
+    if (box.hidden) return;  // only refreshed while shown
     const t = performance.now();
     if (!force && t - (this.diagAt || 0) < 900) return;
     this.diagAt = t;
@@ -486,7 +490,7 @@ export class MetronomeCard extends HTMLElement {
     });
     this.$(".meter-note").textContent = `${METERS[s.signature]} beats per bar · ${s.signature === "6/8" ? "Dotted-quarter" : "Quarter-note"} beat`;
     this.all("[data-toggle]").forEach(el => {
-      const key = el.dataset.toggle, value = key === "vibration" ? this.player.vibration : s[key];
+      const key = el.dataset.toggle, value = key === "vibration" ? this.player.vibration : key === "diagnostics" ? this.player.showDiagnostics : s[key];
       el.setAttribute("aria-pressed",String(value)); el.querySelector("small").textContent = value ? "On" : "Off";
     });
     // Output: which page plays; "Play on this device" selects this page (only while idle,

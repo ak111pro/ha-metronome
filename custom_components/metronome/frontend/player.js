@@ -138,6 +138,7 @@ class Player extends EventTarget {
     this.armed = false;
     this.pulse = 20;
     this.vibration = false;
+    this.showDiagnostics = false;  // Advanced → Show diagnostics, local to this page
     this.lastFinished = null;
     this.error = "";
     shared.players.add(this);
@@ -314,7 +315,7 @@ class Player extends EventTarget {
     };
   }
 
-  // Once per take-over, for the HA log (logger custom_components.metronome, info level).
+  // Once per take-over, for the HA log (logger custom_components.metronome, debug level).
   report() {
     clearTimeout(this.reportTimer);
     this.reportTimer = setTimeout(() => {
@@ -328,8 +329,8 @@ class Player extends EventTarget {
     if (!ctx) return null;
     if (this.audio !== ctx) {
       this.audio = ctx;
-      this.master = ctx.createGain();
       this.lastToneEnd = 0;  // times of the previous context mean nothing here
+      this.master = ctx.createGain();
       this.master.connect(ctx.destination);
       ctx.addEventListener("statechange", () => {
         if (this.audio !== ctx) return;

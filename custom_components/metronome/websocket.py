@@ -141,7 +141,7 @@ DIAGNOSTIC_KEYS = (
 @_expected_errors
 def diagnostics(hass, connection, msg):
     """A page that took output reports its audio/haptics state once, for the HA log
-    (logger custom_components.metronome, info). Only known keys, short values, and the HA
+    (logger custom_components.metronome, debug level). Only known keys, short values, and the HA
     user name; nothing else about the device."""
     coordinator = _resolve(hass, connection, msg["entity_id"], POLICY_CONTROL)
     report = {
@@ -149,7 +149,7 @@ def diagnostics(hass, connection, msg):
         for key in DIAGNOSTIC_KEYS
         if key in msg["diagnostics"]
     }
-    _LOGGER.info(
+    _LOGGER.debug(
         "%s: output page of %s reports %s",
         coordinator.entry.title,
         connection.user.name,

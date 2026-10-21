@@ -78,8 +78,12 @@ async def main():
             and not b["msg"],
             b,
         )
-        # Diagnostics visible without any interaction, values present.
+        # Diagnostics: hidden by default (alpha.9), shown by the toggle, values present.
         await cdp.js(f"{R}.querySelector('[data-action=advanced]').click(); 1", gesture=True)
+        await cdp.idle(0.5)
+        hidden = await cdp.js(f"{R}.querySelector('.diagnostics').hidden")
+        check("Diagnostics hidden by default", hidden)
+        await cdp.js(f"{R}.querySelector('[data-toggle=diagnostics]').click(); 1", gesture=True)
         await cdp.idle(1.5)
         rows = await cdp.js(
             f"(() => {{ const d = {R}.querySelector('.diag'); return {{visible: !!d.offsetParent && d.getBoundingClientRect().height > 40, rows: [...d.querySelectorAll('dt')].map(x => x.textContent + ': ' + x.nextElementSibling.textContent)}}; }})()"

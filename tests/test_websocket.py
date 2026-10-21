@@ -346,7 +346,7 @@ async def test_diagnostics_report_is_logged(
 ) -> None:
     """A page that took output sends its audio/haptics state once; it ends up in the log
     with known keys only and short values."""
-    caplog.set_level("INFO", logger="custom_components.metronome")
+    caplog.set_level("DEBUG", logger="custom_components.metronome")
     ws = await ws_factory()
     msg = await ws.send(
         type="metronome/diagnostics",
@@ -362,7 +362,9 @@ async def test_diagnostics_report_is_logged(
         },
     )
     assert msg["success"], msg
-    line = next(r.getMessage() for r in caplog.records if "reports" in r.getMessage())
+    record = next(r for r in caplog.records if "reports" in r.getMessage())
+    assert record.levelname == "DEBUG"  # only visible with debug logging enabled
+    line = record.getMessage()
     assert "Metronome: output page of" in line
     assert "audio=interrupted" in line and "audio_session=playback" in line
     assert "haptics=companion" in line and "sample_rate=48000" in line and "contexts=2" in line
