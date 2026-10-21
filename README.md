@@ -6,7 +6,7 @@
 [![Release](https://img.shields.io/github/v/release/ak111pro/ha-metronome?include_prereleases)](https://github.com/ak111pro/ha-metronome/releases)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://github.com/ak111pro/ha-metronome/blob/main/LICENSE)
 
-**0.1.0-beta.6 · beta, experimental · AI-assisted (built with Codex and Claude) · MIT licence**
+**0.1.0-beta.7 · beta, experimental · AI-assisted (built with Codex and Claude) · MIT licence**
 
 A custom integration and dashboard card that play a metronome on the phone or browser you are
 holding. Home Assistant keeps the shared settings and session; the clicks are synthesized on
@@ -76,7 +76,7 @@ add the resource and logs the URL instead. Add it yourself as a JavaScript modul
 ```yaml
 lovelace:
   resources:
-    - url: /metronome/metronome-card.js?v=0.1.0-beta.6
+    - url: /metronome/metronome-card.js?v=0.1.0-beta.7
       type: module
 ```
 
@@ -154,7 +154,7 @@ Pause is available only when the timer is enabled. It preserves the remaining ti
 | `show_timer` | `true` | Show timer controls and countdown |
 | `show_advanced` | `true` | Show the Advanced button (fifth button of the transport row) |
 | `show_step_buttons` | `true` | Show the −1/+1 buttons (BPM and timer dials, compact tempo row). `false` hides them; tempo then changes by dragging the handle, typing or Tap, the timer by its fields; the compact card keeps the BPM number |
-| `show_timer_bar` | `true` | Compact card: a slim countdown bar (28 px pill, fill in the arc colours over a tinted track, smooth movement) with the remaining time and "Ends …" inside it in the same 14 px text (only the remaining time, centred, if both do not fit); `false` shows the one-line text instead. Only while the timer is on and `show_timer` is true |
+| `show_timer_bar` | `true` | Compact card: a slim countdown bar with the full card's arc thickness and round caps (24 px, the arc's 24/320 at a 320 px dial; fill in the arc colours over a tinted track, smooth movement) with the remaining time and "Ends …" inside it in the same 13 px text (only the remaining time, centred, if both do not fit); `false` shows the one-line text instead. Only while the timer is on and `show_timer` is true |
 | `feedback` | `dots_glow` | `dots`, `dots_glow`, `off`. Compact card: the BPM number pulses (`dots`) and glows (`dots_glow`) on each beat |
 | `features_position` | `bottom` | Compact card: `bottom` (tempo row below the name) or `inline` (beside the name, like the Tile card's features position; falls back to bottom on cards of 340 px and narrower) |
 | `timer_display` | `remaining_finish` | `remaining`, `remaining_finish` |
