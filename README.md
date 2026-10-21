@@ -1,6 +1,6 @@
 # Home Assistant Metronome
 
-**0.1.0-alpha.8 · iOS audio recovery, visible diagnostics, smoother timer; still for review and device testing**
+**0.1.0-alpha.9 · louder clicks (−1 dBFS), diagnostics behind a toggle; still for review and device testing**
 
 A custom integration and dashboard card that play a metronome on the foreground phone or browser. Target environment: Home Assistant Core **2026.10.1**, Docker on a Raspberry Pi 4 (8 GB), with Android and iOS Companion apps.
 
@@ -23,7 +23,7 @@ This repository contains the integration, the card, installation examples, an HA
 3. Add a dashboard resource of type **JavaScript module** with this URL:
 
    ```text
-   /metronome/metronome-card.js?v=0.1.0-alpha.8
+   /metronome/metronome-card.js?v=0.1.0-alpha.9
    ```
 
    Dashboard resources may require Advanced Mode in the user profile. For YAML-managed resources, use `examples/resource.yaml` in the existing Lovelace resources configuration. Do not create a second conflicting Lovelace configuration.
@@ -149,6 +149,15 @@ clock: they continue when the system pauses the sound (see below).
 
 A phone in silent/mute/vibrate-off sound mode (for example Samsung's "Mute" mode) can suppress app vibration entirely; the card says so under Haptics. There is no intensity control.
 
+## Loudness
+
+The clicks are synthesized (sine tones, no sound files). At volume 100 % every sound peaks at
+**−1 dBFS** (0.891): normal beat 1000 Hz, accented first beat 1500 Hz, count-in 800 Hz and
+the two finish-chime tones. The accent is distinguished by **pitch**, not level. The volume
+slider scales linearly from there; mute is 0. Tones never overlap (beats are at least 0.3 s
+apart, the chime tones are sequential and start after the last beat has ended), so nothing
+sums above −1 dBFS. `checks/check_frontend.mjs` asserts this from the constants.
+
 ## iPhone and iPad (audio session)
 
 iOS plays Web Audio in the Companion app with the "ambient" audio session by default, which
@@ -167,10 +176,12 @@ silent clock, the card says "No sound: …", and the next tap anywhere resumes t
 YouTube on an iPhone), the next tap or Start replaces it with a fresh AudioContext and
 re-applies the playback session; Diagnostics count the contexts and record the replacement.
 
-**Advanced → Diagnostics** (always visible) shows the AudioContext state and sample rate, the audio
-session type, whether this page is the output, the haptics path, the app type, the last
-haptic and the last audio error. A page that takes output also writes this once to the HA log
-(`custom_components.metronome`, info level) with the HA user name, nothing else personal.
+**Advanced → Show diagnostics** (off by default, local to the page like Vibration) shows a
+table with the AudioContext state and sample rate, the audio session type, whether this page
+is the output, the haptics path, the app type, the last haptic and the last audio event; it
+only refreshes while shown. A page that takes output also sends this once to HA, logged at
+**debug** level: enable debug logging for `custom_components.metronome` to see it in the HA
+log (HA user name only, nothing else personal).
 
 ## Entities and automations
 

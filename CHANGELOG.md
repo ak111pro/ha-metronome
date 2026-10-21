@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.1.0-alpha.9 (unreleased)
+
+From the alpha.8 re-test (everything passed on the iPhone; haptics need iOS haptic feedback
+enabled).
+
+### Changed
+
+- Louder: every sound peaks at −1 dBFS at volume 100 % (was about −15 dBFS for the accent,
+  −19 to −20 dBFS for the rest). The accent now differs by pitch only.
+- Diagnostics are behind an Advanced → "Show diagnostics" toggle (off by default, per page);
+  the HA log line is debug level.
+
 ## 0.1.0-alpha.8 (unreleased)
 
 From the alpha.7 iOS re-test (silent switch, volume and Tile play confirmed fixed).
