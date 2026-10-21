@@ -2,7 +2,7 @@
 // Keep equal to manifest.json. Every relative import carries ?v=VERSION as well: HA serves
 // these modules without Cache-Control, so a phone could otherwise keep stale submodules
 // after the resource URL was bumped (checks/check_frontend.mjs enforces both).
-export const VERSION = "0.1.0-beta.5";
+export const VERSION = "0.1.0-beta.6";
 export const METERS = {"2/4": 2, "3/4": 3, "4/4": 4, "6/8": 2};
 export const DEFAULT_CONFIG = {
   layout: "full", show_title: true, show_tempo: true, show_signature: true, show_timer: true,

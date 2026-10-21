@@ -1,8 +1,8 @@
 # Changelog
 
-## 0.1.0-beta.5 (unreleased)
+## 0.1.0-beta.6 (unreleased)
 
-0.1.0-beta.3 and 0.1.0-beta.4 were never released; their changes are part of this version
+0.1.0-beta.3 to 0.1.0-beta.5 were never released; their changes are part of this version
 (the version moved on so phones do not keep cached card files).
 
 ### Changed
@@ -15,9 +15,10 @@
 
 - Card option `show_step_buttons` (default `true`): hide the −1/+1 buttons of both dials and
   of the compact card's tempo row; the dials move up to close the gap.
-- Compact card: a timer bar like HA's tile feature sliders: full width, 42 px like the buttons,
-  rounded, fill in the timer arc's colours over a tinted track, smooth movement, with the
-  remaining time and "Ends …" inside it; option `show_timer_bar` (default `true`).
+- Compact card: a slim timer bar (28 px, fully round ends, so it does not look like a slider):
+  full width, fill in the timer arc's colours over a tinted track, smooth movement, the
+  remaining time and "Ends …" inside it in the same text style; option `show_timer_bar`
+  (default `true`).
 - Compact card: a tap anywhere that is not a control opens the full card, like a Tile card
   (not after a drag or scroll).
 
