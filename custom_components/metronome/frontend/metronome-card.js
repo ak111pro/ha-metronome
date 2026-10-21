@@ -1,7 +1,7 @@
-import {getPlayer} from "./player.js?v=0.1.0-beta.4";
-import {styles} from "./styles.js?v=0.1.0-beta.4";
+import {getPlayer} from "./player.js?v=0.1.0-beta.5";
+import {styles} from "./styles.js?v=0.1.0-beta.5";
 import {DEFAULT_CONFIG, COLOR_KEYS, METERS, escapeHTML as esc, clamp, tempo, remaining, splitTime,
-  timeText, arc, point, dialFraction, beatPosition, hapticMode, validColor} from "./shared.js?v=0.1.0-beta.4";
+  timeText, arc, point, dialFraction, beatPosition, hapticMode, validColor} from "./shared.js?v=0.1.0-beta.5";
 
 const icon = name => `<ha-icon icon="mdi:${name}" aria-hidden="true"></ha-icon>`;
 const button = (action, label, glyph, cls = "control") =>
@@ -25,7 +25,7 @@ const transport = (advanced = false) => `<div class="transport" role="group" ari
 
 export class MetronomeCard extends HTMLElement {
   static async getConfigElement() {
-    await import("./editor.js?v=0.1.0-beta.4");
+    await import("./editor.js?v=0.1.0-beta.5");
     return document.createElement("metronome-card-editor");
   }
   static getStubConfig(hass) {
@@ -105,6 +105,7 @@ export class MetronomeCard extends HTMLElement {
   all(selector) { return [...this.shadowRoot.querySelectorAll(selector)]; }
 
   build() {
+    this.barObserver?.disconnect(); this.barObserver = null;
     this.advanced = false;
     this.shadowRoot.innerHTML = `<style>${styles}</style><ha-card class="idle${this.config.layout === "compact" ? " compact" : ""}${this.config.show_step_buttons ? "" : " no-steps"}">
       <section class="main" aria-label="Metronome">
@@ -112,7 +113,7 @@ export class MetronomeCard extends HTMLElement {
         <div class="compact-grid${this.config.features_position === "inline" ? " inline" : ""}">
           <button type="button" class="compact-info" data-action="expand" aria-label="Open metronome controls"><span class="tile-icon">${icon("metronome")}</span><span class="tile-text"><span class="name"${this.config.show_title ? "" : " hidden"}></span><span class="meta"></span></span></button>
           <div class="compact-adjust" role="group" aria-label="Tempo">${button("minus","Decrease by 1 BPM","minus","feature")}<output class="compact-bpm" aria-label="Beats per minute"></output>${button("plus","Increase by 1 BPM","plus","feature")}</div>
-          ${transport()}<div class="compact-timer-area"><div class="timerbar" hidden><div class="bar" role="progressbar" aria-label="Time remaining" aria-valuemin="0"><div class="bar-fill"></div></div><div class="bar-info"><span class="bar-time"></span><span class="bar-ends"></span></div></div><div class="compact-timer" hidden></div></div></div>` : `
+          ${transport()}<div class="compact-timer-area"><div class="timerbar" hidden><div class="bar" role="progressbar" aria-label="Time remaining" aria-valuemin="0"><div class="bar-fill"></div><div class="bar-label"><span class="bar-time"></span><span class="bar-ends"></span></div><div class="bar-label on-fill" aria-hidden="true"><span class="bar-time"></span><span class="bar-ends"></span></div></div></div><div class="compact-timer" hidden></div></div></div>` : `
         <header class="header"${this.config.show_title ? "" : " hidden"}><div class="name"></div></header>
         <div class="dial bpm-dial"><div class="glow" aria-hidden="true"></div>${svg()}
           <input class="sr bpm-range" type="range" min="1" max="200" step="1" aria-label="Tempo dial">
@@ -571,16 +572,14 @@ export class MetronomeCard extends HTMLElement {
       const shown = s.timer_enabled && this.config.show_timer, bar = shown && this.config.show_timer_bar;
       const label = this.$(".compact-timer"), finish = this.finishLabel();
       this.$(".timerbar").hidden = !bar;
-      // With the bar (full width): one line below it, remaining time left and "Ends ..."
-      // right (wraps to its own line on narrow cards); without the bar: the one-line text.
+      // With the bar: both values inside it (see setBarText); without it: the one-line text.
       label.hidden = !shown || bar;
       label.textContent = `${timeText(locked ? rem : finished ? 0 : s.duration)}${finish ? " · " + finish : ""}`;
-      this.$(".bar-ends").textContent = bar ? finish : "";
       if (bar) {
         const animate = locked && state.state === "playing" && !this.motion.matches;
         if (animate && !this.countdownRaf) this.countdownRaf = requestAnimationFrame(() => this.countdownFrame());
         if (!animate) this.drawBar(state, now);
-        this.$(".bar-time").textContent = timeText(locked ? rem : finished ? 0 : s.duration);
+        this.setBarText(timeText(locked ? rem : finished ? 0 : s.duration), finish);
       }
       return;
     }
@@ -633,6 +632,27 @@ export class MetronomeCard extends HTMLElement {
     bar.setAttribute("aria-valuemax", s.duration);
     bar.setAttribute("aria-valuenow", Math.ceil(locked ? rem : finished ? 0 : s.duration));
     bar.setAttribute("aria-valuetext", `${timeText(locked ? rem : finished ? 0 : s.duration)} remaining`);
+  }
+
+  /* Text inside the bar, like HA's tile feature sliders: remaining time left, "Ends ..."
+   * right. Two copies: one in the normal text colour over the track, one in the on-primary
+   * colour clipped to the fill, so it reads on both. If both do not fit (narrow cards, long
+   * finish labels with a date), only the remaining time is shown, centred. */
+  setBarText(time, ends) {
+    const bar = this.$(".bar");
+    if (bar.dataset.text === `${time}|${ends}`) return;
+    bar.dataset.text = `${time}|${ends}`;
+    bar.querySelectorAll(".bar-time").forEach(el => { el.textContent = time; });
+    bar.querySelectorAll(".bar-ends").forEach(el => { el.textContent = ends; });
+    bar.classList.remove("narrow");
+    const label = bar.querySelector(".bar-label");
+    if (!label.clientWidth) { delete bar.dataset.text; return; }  // not laid out yet: retry
+    if (ends && label.scrollWidth > label.clientWidth + 1) bar.classList.add("narrow");
+    if (!this.barObserver) {
+      // A different width (rotation, column change) re-measures on the next draw.
+      this.barObserver = new ResizeObserver(() => { delete bar.dataset.text; });
+      this.barObserver.observe(bar);
+    }
   }
 
   countdownFrame() {
