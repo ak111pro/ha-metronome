@@ -112,7 +112,7 @@ export class MetronomeCard extends HTMLElement {
         <div class="compact-grid${this.config.features_position === "inline" ? " inline" : ""}">
           <button type="button" class="compact-info" data-action="expand" aria-label="Open metronome controls"><span class="tile-icon">${icon("metronome")}</span><span class="tile-text"><span class="name"${this.config.show_title ? "" : " hidden"}></span><span class="meta"></span></span></button>
           <div class="compact-adjust" role="group" aria-label="Tempo">${button("minus","Decrease by 1 BPM","minus","feature")}<output class="compact-bpm" aria-label="Beats per minute"></output>${button("plus","Increase by 1 BPM","plus","feature")}</div>
-          ${transport()}<div class="compact-timer-area"><div class="timerbar" hidden><div class="bar" role="progressbar" aria-label="Time remaining" aria-valuemin="0"><div class="bar-fill"></div></div><span class="bar-time"></span></div><div class="compact-timer" hidden></div></div></div>` : `
+          ${transport()}<div class="compact-timer-area"><div class="timerbar" hidden><div class="bar" role="progressbar" aria-label="Time remaining" aria-valuemin="0"><div class="bar-fill"></div></div><div class="bar-info"><span class="bar-time"></span><span class="bar-ends"></span></div></div><div class="compact-timer" hidden></div></div></div>` : `
         <header class="header"${this.config.show_title ? "" : " hidden"}><div class="name"></div></header>
         <div class="dial bpm-dial"><div class="glow" aria-hidden="true"></div>${svg()}
           <input class="sr bpm-range" type="range" min="1" max="200" step="1" aria-label="Tempo dial">
@@ -571,9 +571,11 @@ export class MetronomeCard extends HTMLElement {
       const shown = s.timer_enabled && this.config.show_timer, bar = shown && this.config.show_timer_bar;
       const label = this.$(".compact-timer"), finish = this.finishLabel();
       this.$(".timerbar").hidden = !bar;
-      // With the bar: remaining time beside it, "Ends ..." small below; without: one line.
-      label.hidden = !shown || (bar && !finish);
-      label.textContent = bar ? finish : `${timeText(locked ? rem : finished ? 0 : s.duration)}${finish ? " · " + finish : ""}`;
+      // With the bar (full width): one line below it, remaining time left and "Ends ..."
+      // right (wraps to its own line on narrow cards); without the bar: the one-line text.
+      label.hidden = !shown || bar;
+      label.textContent = `${timeText(locked ? rem : finished ? 0 : s.duration)}${finish ? " · " + finish : ""}`;
+      this.$(".bar-ends").textContent = bar ? finish : "";
       if (bar) {
         const animate = locked && state.state === "playing" && !this.motion.matches;
         if (animate && !this.countdownRaf) this.countdownRaf = requestAnimationFrame(() => this.countdownFrame());

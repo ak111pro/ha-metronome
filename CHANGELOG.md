@@ -16,7 +16,8 @@ so phones do not keep cached beta.3 card files).
 - Card option `show_step_buttons` (default `true`): hide the −1/+1 buttons of both dials and
   of the compact card's tempo row; the dials move up to close the gap.
 - Compact card: a horizontal timer bar (thickness, round caps, colours and smooth movement of
-  the timer arc) with the remaining time beside it; option `show_timer_bar` (default `true`).
+  the timer arc) across the full width, the remaining time and "Ends …" on a line below;
+  option `show_timer_bar` (default `true`).
 - Compact card: a tap anywhere that is not a control opens the full card, like a Tile card
   (not after a drag or scroll).
 
