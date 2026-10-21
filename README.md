@@ -154,13 +154,14 @@ Pause is available only when the timer is enabled. It preserves the remaining ti
 | `show_timer` | `true` | Show timer controls and countdown |
 | `show_advanced` | `true` | Show the Advanced button (fifth button of the transport row) |
 | `show_step_buttons` | `true` | Show the −1/+1 buttons (BPM and timer dials, compact tempo row). `false` hides them; tempo then changes by dragging the handle, typing or Tap, the timer by its fields; the compact card keeps the BPM number |
+| `show_timer_bar` | `true` | Compact card: a horizontal countdown bar (same thickness, round caps and colours as the timer arc) with the remaining time beside it and "Ends …" below; `false` shows the one-line text instead. Only while the timer is on and `show_timer` is true |
 | `feedback` | `dots_glow` | `dots`, `dots_glow`, `off`. Compact card: the BPM number pulses (`dots`) and glows (`dots_glow`) on each beat |
 | `features_position` | `bottom` | Compact card: `bottom` (tempo row below the name) or `inline` (beside the name, like the Tile card's features position; falls back to bottom on cards of 340 px and narrower) |
 | `timer_display` | `remaining_finish` | `remaining`, `remaining_finish` |
 | `primary_color` | theme | Any CSS colour, see [Colours](#colours) |
 | `secondary_color` | theme | Any CSS colour, see [Colours](#colours) |
 
-**Compact card** follows HA's Tile card: a coloured icon circle, name and state line, and
+**Compact card** follows HA's Tile card (a tap anywhere on it that is not a control opens the full card): a coloured icon circle, name and state line, and
 42 px feature-style buttons (−/BPM/+, then Start, Stop, Pause, Timer). Tap the icon or name
 (or focus it and press Enter) to open the full card in a dialog. While playing, the BPM number
 pulses gently on each beat in the primary colour (stronger on the accented first beat; the

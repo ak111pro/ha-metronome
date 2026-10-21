@@ -117,6 +117,7 @@ def no_defaults(config):
         "features_position": "bottom",
         "show_title": True,
         "show_step_buttons": True,
+        "show_timer_bar": True,
     }
     return [k for k, v in config.items() if defaults.get(k, object()) == v]
 

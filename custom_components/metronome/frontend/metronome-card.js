@@ -112,7 +112,7 @@ export class MetronomeCard extends HTMLElement {
         <div class="compact-grid${this.config.features_position === "inline" ? " inline" : ""}">
           <button type="button" class="compact-info" data-action="expand" aria-label="Open metronome controls"><span class="tile-icon">${icon("metronome")}</span><span class="tile-text"><span class="name"${this.config.show_title ? "" : " hidden"}></span><span class="meta"></span></span></button>
           <div class="compact-adjust" role="group" aria-label="Tempo">${button("minus","Decrease by 1 BPM","minus","feature")}<output class="compact-bpm" aria-label="Beats per minute"></output>${button("plus","Increase by 1 BPM","plus","feature")}</div>
-          ${transport()}<div class="compact-timer" hidden></div></div>` : `
+          ${transport()}<div class="compact-timer-area"><div class="timerbar" hidden><div class="bar" role="progressbar" aria-label="Time remaining" aria-valuemin="0"><div class="bar-fill"></div></div><span class="bar-time"></span></div><div class="compact-timer" hidden></div></div></div>` : `
         <header class="header"${this.config.show_title ? "" : " hidden"}><div class="name"></div></header>
         <div class="dial bpm-dial"><div class="glow" aria-hidden="true"></div>${svg()}
           <input class="sr bpm-range" type="range" min="1" max="200" step="1" aria-label="Tempo dial">
@@ -138,6 +138,7 @@ export class MetronomeCard extends HTMLElement {
       </section><div class="message" role="status" hidden></div>
       </ha-card>`;
     this.shadowRoot.addEventListener("click", this.clickHandler ||= event => this.handleClick(event));
+    this.shadowRoot.addEventListener("pointerdown", this.downHandler ||= event => { this.downAt = {x: event.clientX, y: event.clientY}; });
     this.shadowRoot.addEventListener("change", this.changeHandler ||= event => this.handleChange(event));
     this.shadowRoot.addEventListener("input", this.inputHandler ||= event => {
       // Typing previews the value on the arc and tempo marking; Enter/blur commits it.
@@ -184,6 +185,7 @@ export class MetronomeCard extends HTMLElement {
   }
   handleClick(event) {
     const target = event.target.closest("button");
+    if (!target && this.config.layout === "compact") return this.compactBodyTap(event);
     if (!target || target.disabled) return;
     const pickerEl = target.closest(".picker");
     if (pickerEl) {
@@ -253,6 +255,18 @@ export class MetronomeCard extends HTMLElement {
       this.patch({duration: Math.max(1, values[0]*3600 + values[1]*60 + values[2])});
     }
   }
+  /* Compact card body acts like a Tile card's body: a tap anywhere that is not a control
+   * (padding, the BPM-number row, the timer bar) opens the full view. A drag or scroll does
+   * not: the pointer must stay within 10 px. Keyboard users use the icon/name button. */
+  compactBodyTap(event) {
+    if (event.composedPath().some(el => el.localName === "dialog")) return;
+    if (!event.composedPath().includes(this.$("ha-card"))) return;
+    if (event.target.closest?.("input,[role=slider],a")) return;
+    const down = this.downAt;
+    if (down && Math.hypot(event.clientX - down.x, event.clientY - down.y) > 10) return;
+    this.openDialog();
+  }
+
   closeMenus() {
     this.all(".menu").forEach(el => { el.hidden = true; });
     this.all(".picker>.select-trigger").forEach(el => el.setAttribute("aria-expanded","false"));
@@ -554,9 +568,18 @@ export class MetronomeCard extends HTMLElement {
       if (beat !== this.lastVisualBeat && now >= state.anchor_at) { this.lastVisualBeat = beat; this.pulse(((beat % METERS[s.signature])+METERS[s.signature])%METERS[s.signature], beat < 0); }
     }
     if (this.config.layout === "compact") {
-      const label = this.$(".compact-timer");
-      label.hidden = !s.timer_enabled || !this.config.show_timer;
-      label.textContent = `${timeText(locked ? rem : finished ? 0 : s.duration)}${this.finishLabel() ? " · " + this.finishLabel() : ""}`;
+      const shown = s.timer_enabled && this.config.show_timer, bar = shown && this.config.show_timer_bar;
+      const label = this.$(".compact-timer"), finish = this.finishLabel();
+      this.$(".timerbar").hidden = !bar;
+      // With the bar: remaining time beside it, "Ends ..." small below; without: one line.
+      label.hidden = !shown || (bar && !finish);
+      label.textContent = bar ? finish : `${timeText(locked ? rem : finished ? 0 : s.duration)}${finish ? " · " + finish : ""}`;
+      if (bar) {
+        const animate = locked && state.state === "playing" && !this.motion.matches;
+        if (animate && !this.countdownRaf) this.countdownRaf = requestAnimationFrame(() => this.countdownFrame());
+        if (!animate) this.drawBar(state, now);
+        this.$(".bar-time").textContent = timeText(locked ? rem : finished ? 0 : s.duration);
+      }
       return;
     }
     // While the timer handle is dragged, the fields follow it (s.duration lags behind).
@@ -594,10 +617,32 @@ export class MetronomeCard extends HTMLElement {
     this.$(".timer-hint").textContent = countIn ? "Starts after count-in" : state.state === "paused" ? "Paused · time saved" : state.state === "playing" ? this.finishLabel() : finished ? "Timer finished" : outside ? "Dial: 5 s – 2 min" : `${["Hours","Minutes","Seconds"][this.selectedField]} selected`;
   }
 
+  /* Compact timer bar: same thickness (24 px = the arc's 24/320 at a 320 px dial), round
+   * caps and colours as the timer arc: muted while idle or paused, primary while running.
+   * Full while idle (the configured duration), then the remaining share. */
+  drawBar(state, now) {
+    const s = state.settings, locked = state.state !== "idle";
+    const rem = remaining(state, now), finished = state.state === "idle" && state.completed;
+    const value = locked ? (this.motion.matches ? Math.ceil(rem) : rem) : finished ? 0 : s.duration;
+    const fraction = locked ? clamp(value / s.duration, 0, 1) : finished ? 0 : 1;
+    const bar = this.$(".bar");
+    bar.style.setProperty("--fraction", fraction);
+    bar.classList.toggle("empty", fraction <= 0);
+    bar.setAttribute("aria-valuemax", s.duration);
+    bar.setAttribute("aria-valuenow", Math.ceil(locked ? rem : finished ? 0 : s.duration));
+    bar.setAttribute("aria-valuetext", `${timeText(locked ? rem : finished ? 0 : s.duration)} remaining`);
+  }
+
   countdownFrame() {
     this.countdownRaf = null;
     const state = this.player?.state;
-    if (!state || !this.isConnected || state.state !== "playing" || this.motion.matches || this.config.layout === "compact") return;
+    if (!state || !this.isConnected || state.state !== "playing" || this.motion.matches) return;
+    if (this.config.layout === "compact") {
+      if (this.$(".timerbar").hidden) return;
+      this.drawBar(state, this.player.now());
+      this.countdownRaf = requestAnimationFrame(() => this.countdownFrame());
+      return;
+    }
     const dial = this.$(".timer-dial");
     if (!dial || !this.$(".timer-panel.open")) return;
     this.draw(dial, remaining(state, this.player.now()) / state.settings.duration, true);
