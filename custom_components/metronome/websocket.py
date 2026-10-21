@@ -1,6 +1,7 @@
 """Authenticated controls. Ownership is bound to a server-side WS connection."""
 
 from functools import wraps
+import logging
 from time import monotonic
 
 import probatio as vol
@@ -13,6 +14,8 @@ from homeassistant.exceptions import ServiceValidationError, Unauthorized
 from homeassistant.helpers import entity_registry as er
 
 from .const import ARM_SECONDS, ARMED, DOMAIN
+
+_LOGGER = logging.getLogger(__name__.rpartition(".")[0])
 
 
 def _resolve(hass, connection, entity_id, policy):
@@ -46,6 +49,7 @@ def async_register_commands(hass):
     websocket_api.async_register_command(hass, subscribe)
     websocket_api.async_register_command(hass, control)
     websocket_api.async_register_command(hass, arm)
+    websocket_api.async_register_command(hass, diagnostics)
 
 
 @websocket_api.websocket_command(
@@ -106,4 +110,48 @@ def arm(hass, connection, msg):
         if now - at > ARM_SECONDS * 4:
             del armed[key]
     armed[id(connection)] = (connection, now)
+    connection.send_result(msg["id"])
+
+
+DIAGNOSTIC_KEYS = (
+    "audio",
+    "sample_rate",
+    "audio_session",
+    "owner",
+    "ready",
+    "haptics",
+    "vibration_on",
+    "last_haptic",
+    "last_error",
+    "app",
+    "external_bus",
+    "vibrate_api",
+)
+
+
+@websocket_api.websocket_command(
+    {
+        vol.Required("type"): "metronome/diagnostics",
+        vol.Required("entity_id"): str,
+        vol.Required("diagnostics"): dict,
+    }
+)
+@callback
+@_expected_errors
+def diagnostics(hass, connection, msg):
+    """A page that took output reports its audio/haptics state once, for the HA log
+    (logger custom_components.metronome, info). Only known keys, short values, and the HA
+    user name; nothing else about the device."""
+    coordinator = _resolve(hass, connection, msg["entity_id"], POLICY_CONTROL)
+    report = {
+        key: str(msg["diagnostics"][key])[:120]
+        for key in DIAGNOSTIC_KEYS
+        if key in msg["diagnostics"]
+    }
+    _LOGGER.info(
+        "%s: output page of %s reports %s",
+        coordinator.entry.title,
+        connection.user.name,
+        ", ".join(f"{k}={v}" for k, v in report.items()),
+    )
     connection.send_result(msg["id"])

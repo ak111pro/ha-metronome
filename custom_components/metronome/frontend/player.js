@@ -22,11 +22,42 @@ export function audioContext() {
   return shared.ctx;
 }
 export const recentGesture = () => performance.now() - shared.gestureAt < GESTURE_MS;
+// resume() can hang on WebKit (e.g. while a call holds the audio session): never wait forever.
+export const withTimeout = (promise, ms) => Promise.race([promise.catch(() => {}), new Promise(resolve => setTimeout(resolve, ms))]);
+shared.lastError ||= "";
+export const lastAudioError = () => shared.lastError;
+function noteError(text) { shared.lastError = `${new Date().toLocaleTimeString()} ${text}`; }
+
+/* iOS: Web Audio in the Companion app's WKWebView uses the "ambient" audio session by default,
+ * which the ring/silent switch mutes (the iPad has no switch). The page that becomes the output
+ * switches to "playback" (WebKit Audio Session API, iOS 17+), like a music app: the silent
+ * switch no longer mutes it, and other apps' audio pauses while it plays. Without that API
+ * (older iOS), a looping silent <audio> element started in the tap does the same. Back to
+ * "auto" when the page stops being the output. Other browsers have neither: no change there. */
+const IOS = typeof navigator !== "undefined" && (/iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1));
+const SILENT_WAV = "data:audio/wav;base64,UklGRkQDAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YSADAACAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgA==";
+export const audioSessionType = () => (typeof navigator !== "undefined" && navigator.audioSession?.type) || null;
+export function playbackSession(on) {
+  try {
+    if (navigator.audioSession) {
+      const type = on ? "playback" : "auto";
+      if (navigator.audioSession.type !== type) navigator.audioSession.type = type;
+    } else if (IOS) {
+      if (!shared.unlock) {
+        shared.unlock = new Audio(SILENT_WAV);
+        shared.unlock.loop = true;
+        shared.unlock.setAttribute("playsinline", "");
+      }
+      if (on) shared.unlock.play().catch(() => {}); else shared.unlock.pause();
+    }
+  } catch (error) { noteError(`audio session: ${error?.message || error}`); }
+}
 function scheduleSuspend() {
   clearTimeout(shared.timer);
   shared.timer = setTimeout(() => {
     if ([...shared.players].some(p => p.readyForAudio) || recentGesture()) return scheduleSuspend();
     if (shared.ctx?.state === "running") shared.ctx.suspend().catch(() => {});
+    playbackSession(false);
   }, GESTURE_MS);
 }
 // Metronome media players known to this page: each gets a (standby) subscription, so HA
@@ -145,10 +176,10 @@ class Player extends EventTarget {
       this.readyForAudio = true;
       this.armed = true;
       this.error = "";
-      if (this.audio.state !== "running") {
-        this.audio.resume().then(() => { this.timeline = null; if (this.state) this.receive(this.state); })
-          .catch(() => this.interrupt("Tap Start to enable audio on this device."));
-      }
+      playbackSession(true);
+      // The scheduler runs on a silent clock until the context runs (statechange reschedules).
+      if (this.audio.state !== "running") withTimeout(this.audio.resume(), 1500).then(() => this.checkAudio());
+      this.report();
     }
     this.updateGain();
     const timeline = `${state.session_id}/${state.anchor_at}/${state.settings.bpm}/${state.state}/${state.is_owner}`;
@@ -156,8 +187,7 @@ class Player extends EventTarget {
       this.timeline = timeline;
       const preserveChime = state.is_owner && state.state === "idle" && state.last_event === "finished" && this.lastFinished === state.session_id;
       this.silence(!preserveChime);
-      if (state.state === "playing" && state.is_owner && this.readyForAudio && !document.hidden && this.audio?.state === "running") this.schedule();
-      else if (state.state === "playing" && state.is_owner && this.readyForAudio) this.timeline = null;
+      if (state.state === "playing" && state.is_owner && this.readyForAudio && !document.hidden) this.schedule();
     }
     if (previous?.state === "playing" && state.state === "idle" && state.last_event === "finished" && state.is_owner) this.finished();
     if (state.is_owner && !this.readyForAudio && !this.rearming) {
@@ -182,7 +212,7 @@ class Player extends EventTarget {
     this.lastRearm = performance.now();
     this.rearming = true;
     try {
-      if (this.audio.state !== "running") await this.audio.resume();
+      if (this.audio.state !== "running") await withTimeout(this.audio.resume(), 1500);
       if (this.audio.state !== "running" || document.hidden) return;
       this.readyForAudio = true;
       await this.send("claim");
@@ -200,8 +230,8 @@ class Player extends EventTarget {
   async claim() {
     // resume() is invoked directly during the click gesture, before network waits.
     if (!this.attachAudio()) throw new Error("Audio is unavailable in this browser");
-    await this.audio.resume();
-    if (this.audio.state !== "running") throw new Error("Tap Start again to allow audio on this device");
+    playbackSession(true);
+    await withTimeout(this.audio.resume(), 1500);
     await this.ready;
     this.readyForAudio = true;
     this.armed = true;
@@ -212,6 +242,46 @@ class Player extends EventTarget {
       if (!this.state?.is_owner) this.readyForAudio = false;
       throw error;
     }
+    // Without a running context the session still runs: beat dots and haptics continue,
+    // sound comes back when the system lets the context run (next tap).
+    this.checkAudio();
+    this.report();
+  }
+
+  /* Sound blocked or paused by the system (WebKit "interrupted": calls, Siri, other apps;
+   * or "suspended"): keep the output and the beat (dots, haptics), say why, retry on the
+   * next tap (the gesture listener resumes the context). */
+  checkAudio() {
+    if (!this.readyForAudio || !this.audio) return;
+    if (this.audio.state === "running") {
+      if (this.error.startsWith("No sound")) { this.error = ""; this.emit("change", this.state); }
+      return;
+    }
+    noteError(`AudioContext ${this.audio.state}`);
+    this.error = `No sound: the system paused audio on this device (${this.audio.state}). Beat dots and haptics continue; tap anywhere to resume sound.`;
+    this.emit("change", this.state);
+  }
+
+  diagnostics() {
+    const ctx = shared.ctx;
+    return {
+      audio: ctx ? ctx.state : "none", sample_rate: ctx ? ctx.sampleRate : null,
+      audio_session: audioSessionType() || (IOS ? "n/a (silent-audio fallback)" : "n/a"),
+      owner: !!this.state?.is_owner, ready: this.readyForAudio,
+      haptics: hapticMode() || "none", vibration_on: this.vibration,
+      last_haptic: this.lastHaptic || "", last_error: shared.lastError || "",
+      app: window.webkit?.messageHandlers?.externalBus ? "ios-companion" : window.externalApp ? "android-companion" : "browser",
+      external_bus: !!document.querySelector("home-assistant")?.hass?.auth?.external,
+      vibrate_api: typeof navigator.vibrate === "function",
+    };
+  }
+
+  // Once per take-over, for the HA log (logger custom_components.metronome, info level).
+  report() {
+    clearTimeout(this.reportTimer);
+    this.reportTimer = setTimeout(() => {
+      this.connection.sendMessagePromise({type: "metronome/diagnostics", entity_id: this.entity, diagnostics: this.diagnostics()}).catch(() => {});
+    }, 1500);
   }
 
   // Use the page's shared AudioContext (own gain node per instance).
@@ -224,8 +294,11 @@ class Player extends EventTarget {
       this.master.connect(ctx.destination);
       ctx.addEventListener("statechange", () => {
         if (this.audio !== ctx) return;
-        if (this.readyForAudio && ctx.state !== "running") this.interrupt("Audio was interrupted. Tap Start to enable it again.");
-        else if (ctx.state === "running") this.rearm();
+        if (this.readyForAudio) {
+          // Switch the scheduler between the audio clock and the silent clock.
+          if (this.state?.state === "playing" && this.state.is_owner && !document.hidden) this.schedule();
+          this.checkAudio();
+        } else if (ctx.state === "running") this.rearm();
       });
       this.updateGain();
     }
@@ -266,7 +339,7 @@ class Player extends EventTarget {
     this.silence();
     const wasReady = this.readyForAudio;
     this.readyForAudio = false;
-    if (wasReady) scheduleSuspend();
+    if (wasReady) { scheduleSuspend(); playbackSession(false); }
     if (wasReady) this.send("release").catch(() => {});
     if (error) this.fail(error);
   }
@@ -289,36 +362,48 @@ class Player extends EventTarget {
     oscillator.stop(when + duration + 0.01);
   }
 
+  /* Beats run on the audio clock when the context runs, otherwise on a silent clock (HA
+   * time): dots and haptics never depend on audible sound. A state change of the context
+   * reschedules (see attachAudio). */
   schedule() {
+    clearInterval(this.loop);
+    for (const timeout of this.visuals) clearTimeout(timeout);
+    this.visuals.clear();
     const state = this.state;
     const period = 60 / state.settings.bpm;
-    // Convert once per timeline update, then schedule against the audio clock.
-    const base = this.audio.currentTime + state.anchor_at - this.now();
+    const audible = this.audio?.state === "running";
+    const clock = audible ? () => this.audio.currentTime : () => this.now();
+    // Convert once per timeline update, then schedule against the chosen clock.
+    const base = audible ? this.audio.currentTime + state.anchor_at - this.now() : state.anchor_at;
     let index = Math.max(Math.ceil(state.anchor_beat), Math.ceil(beatPosition(state, this.now() + 0.005)));
     const tick = () => {
-      if (!this.readyForAudio || this.audio.state !== "running") return this.interrupt();
+      if (!this.readyForAudio) return this.interrupt();
+      if (audible !== (this.audio?.state === "running")) return this.schedule();
       if (state.ends_at != null && this.now() >= state.ends_at) {
         this.silence(); this.finished(); return;
       }
+      const now = clock();
       let when = base + (index - state.anchor_beat) * period;
       // Do not burst through missed beats after a foreground main-thread stall.
-      if (when < this.audio.currentTime - 0.03) {
-        index = Math.ceil(state.anchor_beat + (this.audio.currentTime - base) / period);
+      if (when < now - 0.03) {
+        index = Math.ceil(state.anchor_beat + (now - base) / period);
         when = base + (index - state.anchor_beat) * period;
       }
-      while (when < this.audio.currentTime + 0.10) {
+      while (when < now + 0.10) {
         const utc = state.anchor_at + (index - state.anchor_beat) * period;
         if (state.ends_at != null && utc >= state.ends_at) break;
         const beat = ((index % METERS[state.settings.signature]) + METERS[state.settings.signature]) % METERS[state.settings.signature];
         const countIn = index < 0;
         const accent = beat === 0 && this.state.settings.accent;
-        this.tone(Math.max(when, this.audio.currentTime), countIn ? 800 : accent ? 1500 : 1000,
-          countIn ? 0.055 : 0.045, countIn ? 0.15 : accent ? 0.27 : 0.18);
+        if (audible) {
+          this.tone(Math.max(when, now), countIn ? 800 : accent ? 1500 : 1000,
+            countIn ? 0.055 : 0.045, countIn ? 0.15 : accent ? 0.27 : 0.18);
+        }
         const timeout = setTimeout(() => {
           this.visuals.delete(timeout);
           this.emit("beat", {beat, countIn});
           if (this.vibration && !document.hidden) this.buzz();
-        }, Math.max(0, when - this.audio.currentTime) * 1000);
+        }, Math.max(0, when - now) * 1000);
         this.visuals.add(timeout);
         index++;
         when = base + (index - state.anchor_beat) * period;
@@ -330,13 +415,24 @@ class Player extends EventTarget {
 
   buzz() {
     const mode = hapticMode();
+    this.lastHaptic = `${new Date().toLocaleTimeString()} ${mode || "none"} ${this.pulse} ms`;
     if (mode === "vibrate") navigator.vibrate(this.pulse);
-    // HA's frontend listens for this on window and passes it to the Companion app.
-    else if (mode === "companion") window.dispatchEvent(new CustomEvent("haptic", {detail: HAPTIC_TYPES[this.pulse] || "light"}));
+    else if (mode === "companion") {
+      // Exactly what HA 2026.10's frontend does with its window "haptic" event inside the
+      // app (attachExternalToApp): external bus message {type: "haptic", payload:
+      // {hapticType}}. Sent directly on hass.auth.external when it exists (inside the app),
+      // otherwise through the window event HA forwards.
+      const hapticType = HAPTIC_TYPES[this.pulse] || "light";
+      const external = document.querySelector("home-assistant")?.hass?.auth?.external;
+      if (external?.fireMessage) external.fireMessage({type: "haptic", payload: {hapticType}});
+      else window.dispatchEvent(new CustomEvent("haptic", {detail: hapticType}));
+      this.lastHaptic += external?.fireMessage ? " via external bus" : " via window event";
+    }
   }
 
   finished() {
     if (!this.readyForAudio || !this.audio || this.lastFinished === this.state.session_id) return;
+    if (this.audio.state !== "running") { this.lastFinished = this.state.session_id; return; }
     this.lastFinished = this.state.session_id;
     if (this.state.settings.muted) return;
     this.tone(this.audio.currentTime + 0.01, 659.25, 0.20, 0.18, true);

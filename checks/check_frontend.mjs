@@ -24,6 +24,7 @@ assert.equal(hapticMode(vib, {externalApp: {}}), "vibrate");
 assert.equal(hapticMode({}, {webkit: {messageHandlers: {externalBus: {}}}}), "companion");
 assert.equal(hapticMode({}, {externalApp: {}}), "companion");
 assert.equal(hapticMode({}, {webkit: {}}), null);
+assert.equal(hapticMode(vib, {webkit: {messageHandlers: {externalBus: {}}}}), "companion"); // iOS app wins over a vibrate stub
 assert.deepEqual([20, 40, 70].map(ms => HAPTIC_TYPES[ms]), ["light", "medium", "heavy"]);
 // Card editor: YAML keeps type + entity first and only non-default options.
 assert.deepEqual(Object.entries(cleanConfig({layout: "full", show_tempo: true, feedback: "dots_glow",

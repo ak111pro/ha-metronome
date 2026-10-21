@@ -129,9 +129,10 @@ export class MetronomeCard extends HTMLElement {
       <section class="advanced-view" aria-label="Advanced settings" hidden>
         <header class="subheader">${button("back","Back to metronome","chevron-left","back")}<div><div class="breadcrumb"></div><div class="name">Advanced</div></div></header>
         <div class="settings"><div class="settings-label">Rhythm</div><div class="grid">${picker("signature")}${picker("count_in")}</div><div class="note meter-note"></div>${tile("accent","Accent first beat","waveform")}
-          <div class="settings-label">Sound</div><label class="volume-label" for="volume"><span>Volume</span><output></output></label><div class="volume-wrap"><div class="volume-fill" aria-hidden="true"><span class="volume-marker"></span></div><input id="volume" class="volume" type="range" min="0" max="100" step="1" aria-label="Volume"></div>${tile("muted","Mute","volume-off")}
+          <div class="settings-label">Sound</div><div class="volume-label"><span id="volume-label">Volume</span><output></output></div><div class="volume-wrap" role="slider" tabindex="0" aria-labelledby="volume-label" aria-valuemin="0" aria-valuemax="100"><div class="volume-fill" aria-hidden="true"><span class="volume-marker"></span></div></div>${tile("muted","Mute","volume-off")}
           <div class="settings-label">Output</div><div class="output"><div class="output-status" role="status">${icon("volume-high")}<span class="output-device"></span></div><button type="button" class="tile output-claim" data-action="claim">${icon("cellphone-arrow-down")}<span>Play on this device</span></button><div class="note output-note"></div></div>
-          <div class="haptics"><div class="settings-label">Haptics</div><div class="grid">${tile("vibration","Vibration","vibrate")}${picker("pulse")}</div><div class="note haptics-note"></div></div>
+          <div class="haptics"><div class="settings-label">Haptics</div><div class="grid">${tile("vibration","Vibration","vibrate")}${picker("pulse")}</div><div class="note haptics-note"></div><button type="button" class="tile haptic-test" data-action="test-haptic">${icon("vibrate")}<span>Test vibration</span></button></div>
+          <details class="diagnostics"><summary>Diagnostics</summary><dl class="diag"></dl></details>
         </div>
       </section><div class="message" role="status" hidden></div>
       </ha-card>`;
@@ -140,12 +141,6 @@ export class MetronomeCard extends HTMLElement {
     this.shadowRoot.addEventListener("input", this.inputHandler ||= event => {
       // Typing previews the value on the arc and tempo marking; Enter/blur commits it.
       if (event.target.classList.contains("bpm")) return this.update();
-      if (event.target.classList.contains("volume")) {
-        const v = Number(event.target.value);
-        this.$(".volume-wrap").style.setProperty("--volume", `${v}%`);
-        this.$(".volume-label output").textContent = `${v}%`;
-        this.patch({volume: v / 100}, true);
-      }
     });
     this.shadowRoot.addEventListener("focusout", this.blurHandler ||= event => {
       if (event.target.classList.contains("bpm")) queueMicrotask(() => this.update());
@@ -164,6 +159,7 @@ export class MetronomeCard extends HTMLElement {
       }
       this.menuKey(event);
     });
+    this.bindVolume();
     this.bindDial(".bpm-dial", false);
     this.bindDial(".timer-dial", true);
   }
@@ -224,6 +220,7 @@ export class MetronomeCard extends HTMLElement {
     if (!state) return;
     if (action === "start") return this.run(() => this.player.start());
     if (action === "claim") return this.run(() => this.player.claim());
+    if (action === "test-haptic") { this.player.buzz(); this.updateDiagnostics(true); return; }
     if (action === "stop" || action === "pause") return this.run(() => this.player.action(action));
     if (action === "timer") return this.patch({timer_enabled: !state.settings.timer_enabled});
     if (action === "minus" || action === "plus") return this.patch({bpm: clamp(state.settings.bpm + (action === "plus" ? 1 : -1),1,200)});
@@ -248,7 +245,6 @@ export class MetronomeCard extends HTMLElement {
     const input = event.target;
     if (input.matches(".bpm,.bpm-range")) this.patch({bpm: clamp(Math.round(Number(input.value)),1,200)});
     if (input.matches(".timer-range")) this.patch({duration: clamp(Math.round(Number(input.value)),5,120)});
-    if (input.matches(".volume")) this.patch({volume: Number(input.value)/100});
     if (input.dataset.field != null) {
       const values = this.all("[data-field]").map((el,i) => clamp(Math.round(Number(el.value)),0,i ? 59 : 99));
       this.patch({duration: Math.max(1, values[0]*3600 + values[1]*60 + values[2])});
@@ -327,6 +323,63 @@ export class MetronomeCard extends HTMLElement {
     const stopTouch = event => { if (event.cancelable) event.preventDefault(); };
     path.addEventListener("touchstart", stopTouch, {passive: false});
     path.addEventListener("touchmove", stopTouch, {passive: false});
+  }
+  /* Volume: a pointer-events slider over the whole 48 px track (no native range input:
+   * WebKit's thumb could not be dragged on the iPad and showed through as a second handle on
+   * the iPhone). Drag or tap anywhere; keyboard: arrows +-1, PageUp/PageDown +-10, Home/End.
+   * The value is sent coalesced while dragging and committed on release. */
+  showVolume(value) {
+    const wrap = this.$(".volume-wrap");
+    if (!wrap) return;
+    wrap.style.setProperty("--volume", `${value}%`);
+    wrap.setAttribute("aria-valuenow", value);
+    wrap.setAttribute("aria-valuetext", `${value}%`);
+    this.$(".volume-label output").textContent = `${value}%`;
+  }
+  setVolume(value, commit) {
+    const v = clamp(Math.round(value), 0, 100);
+    this.dragVolume = commit ? null : v;
+    this.showVolume(v);
+    this.patch({volume: v / 100}, !commit);
+  }
+  bindVolume() {
+    const wrap = this.$(".volume-wrap");
+    if (!wrap) return;
+    let dragging = null;
+    const valueAt = event => { const r = wrap.getBoundingClientRect(); return (event.clientX - r.left) / r.width * 100; };
+    wrap.addEventListener("pointerdown", event => {
+      if (!this.player?.state || event.button > 0) return;
+      dragging = event.pointerId;
+      try { wrap.setPointerCapture(event.pointerId); } catch (_) { /* pointer gone */ }
+      this.setVolume(valueAt(event), false);
+    });
+    wrap.addEventListener("pointermove", event => { if (dragging === event.pointerId) this.setVolume(valueAt(event), false); });
+    const end = event => {
+      if (dragging !== event.pointerId) return;
+      dragging = null;
+      this.setVolume(this.dragVolume ?? valueAt(event), true);
+    };
+    wrap.addEventListener("pointerup", end);
+    wrap.addEventListener("pointercancel", end);
+    wrap.addEventListener("keydown", event => {
+      const now = Math.round((this.player?.state?.settings.volume ?? 0) * 100);
+      const step = {ArrowRight: 1, ArrowUp: 1, ArrowLeft: -1, ArrowDown: -1, PageUp: 10, PageDown: -10}[event.key];
+      const next = step != null ? now + step : event.key === "Home" ? 0 : event.key === "End" ? 100 : null;
+      if (next == null) return;
+      event.preventDefault();
+      this.setVolume(next, true);
+    });
+  }
+  // Advanced → Diagnostics (collapsed): what the next phone test needs to see.
+  updateDiagnostics(force = false) {
+    const box = this.$(".diagnostics");
+    if (!box || (!box.open && !force) || !this.player) return;
+    const d = this.player.diagnostics();
+    const rows = [["Audio", `${d.audio}${d.sample_rate ? ` · ${d.sample_rate} Hz` : ""}`], ["Audio session", d.audio_session],
+      ["This page is the output", d.owner ? "yes" : "no"], ["Haptics path", `${d.haptics}${d.vibration_on ? " · on" : " · off"}`],
+      ["App", `${d.app}${d.external_bus ? " · HA external bus" : ""}${d.vibrate_api ? " · navigator.vibrate" : ""}`], ["Last haptic", d.last_haptic || "–"], ["Last audio error", d.last_error || "–"]];
+    const html = rows.map(([k, v]) => `<dt>${esc(k)}</dt><dd>${esc(v)}</dd>`).join("");
+    if (this.$(".diag").innerHTML !== html) this.$(".diag").innerHTML = html;
   }
   // Not "preview": HA sets a boolean `preview` property on every card element.
   previewBpm(bpm) {
@@ -446,10 +499,7 @@ export class MetronomeCard extends HTMLElement {
     this.$(".haptics-note").textContent = haptics === "companion"
       ? "Uses the app's light, medium or heavy haptic. Silent or mute mode can turn it off."
       : "Silent or mute mode on the phone can turn vibration off.";
-    const volume = Math.round(s.volume*100);
-    if (this.shadowRoot.activeElement !== this.$(".volume")) this.$(".volume").value = volume;
-    this.$(".volume-wrap").style.setProperty("--volume", `${volume}%`);
-    this.$(".volume-label output").textContent = `${volume}%`;
+    if (this.dragVolume == null) this.showVolume(Math.round(s.volume*100));
     this.updateClock();
   }
 
@@ -487,6 +537,7 @@ export class MetronomeCard extends HTMLElement {
     const countIn = state.state === "playing" && beatPosition(state,now) < 0;
     const rem = remaining(state,now);
     this.renderStatus(state, now);
+    if (this.advanced) this.updateDiagnostics();
     const finished = state.state === "idle" && state.completed;
     if (state.state === "playing" && !state.is_owner) {
       const beat = Math.floor(beatPosition(state,now));

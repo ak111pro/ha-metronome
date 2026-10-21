@@ -1,5 +1,7 @@
 """Haptics paths: navigator.vibrate(20/40/70) where it exists, HA's "haptic" event in the
-Companion app without navigator.vibrate (simulated iOS app), hidden otherwise."""
+Companion app without navigator.vibrate (simulated iOS app), the external bus message
+directly when hass.auth.external exists (even with a navigator.vibrate stub), hidden
+otherwise. "Test vibration" sends one pulse."""
 
 from cdp import aiohttp, ha_state, login, open_page, run, service
 
@@ -53,6 +55,34 @@ async def main():
         vib, hap = await cdp.js("[window.__vib, window.__hap]")
         print("vibrate calls:", vib, "haptic events:", hap)
         assert hap and set(hap) == {"heavy"} and not vib
+
+        # iOS app as HA's frontend sees it (alpha.7): hass.auth.external exists, and even
+        # with a navigator.vibrate stub the card uses the app's haptics: the external bus
+        # message HA itself sends, {type: "haptic", payload: {hapticType}}.
+        await cdp.js(
+            "Object.defineProperty(navigator, 'vibrate', {configurable: true, value: ms => { window.__vib.push(ms); return true; }});"
+            "window.__bus = []; const h = document.querySelector('home-assistant').hass;"
+            "h.auth.external = {fireMessage: m => window.__bus.push(m), config: {}};"
+            "window.__vib = []; window.__hap = []; 1"
+        )
+        await play(cdp, session)
+        await cdp.js(CLICK + "('[data-action=test-haptic]')", gesture=True)
+        vib, hap, bus = await cdp.js("[window.__vib, window.__hap, window.__bus]")
+        print(
+            "iOS app: vibrate calls:",
+            vib,
+            "window events:",
+            hap,
+            "external bus:",
+            bus[:2],
+            len(bus),
+        )
+        assert not vib and not hap and len(bus) >= 3
+        assert all(m == {"type": "haptic", "payload": {"hapticType": "heavy"}} for m in bus)
+        await cdp.js("delete document.querySelector('home-assistant').hass.auth.external; 1")
+        await cdp.js(
+            "Object.defineProperty(navigator, 'vibrate', {value: undefined, configurable: true}); 1"
+        )
 
         # Plain iOS Safari: neither path, section hidden.
         await cdp.js("delete window.webkit; 1")

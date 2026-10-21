@@ -66,7 +66,10 @@ export function dialFraction(x, y, inverted = false) {
  * The app picks the strength for light/medium/heavy; there is no intensity control. */
 export const HAPTIC_TYPES = {20: "light", 40: "medium", 70: "heavy"};
 export function hapticMode(nav = globalThis.navigator, win = globalThis.window) {
+  // iOS Companion app first: should WebKit ever expose navigator.vibrate it would not reach
+  // the Taptic Engine; the app's own haptics (HA frontend "haptic" event) do.
+  if (win?.webkit?.messageHandlers?.externalBus) return "companion";
   if (typeof nav?.vibrate === "function") return "vibrate";
-  if (win?.externalApp || win?.webkit?.messageHandlers?.externalBus) return "companion";
+  if (win?.externalApp) return "companion";
   return null;
 }

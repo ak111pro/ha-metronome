@@ -339,3 +339,36 @@ async def test_expected_rejections_are_not_logged_as_errors(
         "success"
     ]
     assert [r for r in caplog.records if r.levelname == "ERROR"] == []
+
+
+async def test_diagnostics_report_is_logged(
+    hass: HomeAssistant, loaded, ws_factory, caplog: pytest.LogCaptureFixture
+) -> None:
+    """A page that took output sends its audio/haptics state once; it ends up in the log
+    with known keys only and short values."""
+    caplog.set_level("INFO", logger="custom_components.metronome")
+    ws = await ws_factory()
+    msg = await ws.send(
+        type="metronome/diagnostics",
+        entity_id=PLAYER,
+        diagnostics={
+            "audio": "interrupted",
+            "sample_rate": 48000,
+            "audio_session": "playback",
+            "haptics": "companion",
+            "last_error": "x" * 500,
+            "secret": "not logged",
+        },
+    )
+    assert msg["success"], msg
+    line = next(r.getMessage() for r in caplog.records if "reports" in r.getMessage())
+    assert "Metronome: output page of" in line
+    assert "audio=interrupted" in line and "audio_session=playback" in line
+    assert "haptics=companion" in line and "sample_rate=48000" in line
+    assert "x" * 121 not in line and "secret" not in line
+    bad = await ws.send(type="metronome/diagnostics", entity_id=PLAYER, diagnostics="nope")
+    assert not bad["success"]
+    other = await ws.send(
+        type="metronome/diagnostics", entity_id="media_player.nope", diagnostics={}
+    )
+    assert not other["success"]

@@ -13,7 +13,7 @@ This repository contains the integration, the card, installation examples, an HA
 - Tempo 1–200 BPM, ±1 buttons, tap tempo, tempo markings, beat dots and optional diffuse glow.
 - 2/4, 3/4, 4/4 and 6/8. In 6/8, BPM counts **two dotted-quarter beats per bar**. Subdivisions are not part of this version.
 - Optional countdown, 5–120-second dial, separate hours/minutes/seconds fields up to 99:59:59, pause/resume, actual expected finish time, count-in and completion sound.
-- Volume, mute, accent and capability-dependent vibration. Haptic pulse length is available; vibration intensity is not exposed. See [Haptics](#haptics).
+- Volume (a drag-anywhere 48 px slider with keyboard support), mute, accent and capability-dependent vibration. Haptic pulse length is available; vibration intensity is not exposed. See [Haptics](#haptics).
 - Web Audio scheduling on the selected foreground device. The Pi manages state and settings; it does not synthesize or stream the beats.
 
 ## Install for testing
@@ -138,10 +138,34 @@ secondary_color: "#9c27b0"
 Vibration is off by default and is a local, per-page setting (Advanced → Haptics).
 
 - **Android app and Android browsers:** `navigator.vibrate` with the exact pulse lengths Short/Medium/Long = 20/40/70 ms.
-- **iOS Companion app** (no `navigator.vibrate` in WebKit): the card sends Home Assistant's own frontend `haptic` event, which HA forwards to the app. Short/Medium/Long map to the app's `light`/`medium`/`heavy` haptics; the app decides their strength.
+- **iOS Companion app:** the card sends the app the same external-bus message HA's own frontend sends for its `haptic` event (`{type: "haptic", payload: {hapticType}}`, HA 2026.10 `attachExternalToApp`), directly on `hass.auth.external`. This is used whenever the iOS app's bus is present, even if WebKit exposes a `navigator.vibrate`. Short/Medium/Long map to the app's `light`/`medium`/`heavy` haptics; the app decides their strength.
 - **Other browsers without vibration** (e.g. Safari on iOS): the Haptics section is hidden.
 
+**Test vibration** (Advanced → Haptics) sends one pulse on its own. Haptics run on their own
+clock: they continue when the system pauses the sound (see below).
+
 A phone in silent/mute/vibrate-off sound mode (for example Samsung's "Mute" mode) can suppress app vibration entirely; the card says so under Haptics. There is no intensity control.
+
+## iPhone and iPad (audio session)
+
+iOS plays Web Audio in the Companion app with the "ambient" audio session by default, which
+the **ring/silent switch mutes** (confirmed on an iPhone 14; the iPad has no switch). The page
+that becomes the output therefore sets `navigator.audioSession.type = "playback"` (WebKit
+Audio Session API, iOS 17+) inside the tap, like a music app: the metronome sounds with the
+switch on silent, and **other apps' audio (Spotify, YouTube) pauses while it is the output**.
+When the page stops being the output it goes back to `"auto"`. On iOS without that API a
+looping silent `<audio>` element started in the tap does the same. Other browsers are
+unchanged. Leaving HA or another app taking the audio still stops the metronome.
+
+When the system pauses the sound while playing (WebKit's `interrupted` state: a call, Siri,
+another app; or `suspended`), the session keeps running: beat dots and haptics continue on a
+silent clock, the card says "No sound: …", and the next tap anywhere resumes the sound.
+`resume()` is never awaited for more than 1.5 s.
+
+**Advanced → Diagnostics** (collapsed) shows the AudioContext state and sample rate, the audio
+session type, whether this page is the output, the haptics path, the app type, the last
+haptic and the last audio error. A page that takes output also writes this once to the HA log
+(`custom_components.metronome`, info level) with the HA user name, nothing else personal.
 
 ## Entities and automations
 
