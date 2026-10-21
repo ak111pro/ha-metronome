@@ -2,7 +2,7 @@
  * selector elements); a plain-control fallback is used only if ha-form never appears.
  * Contract: setConfig() + hass setter, and a bubbling, composed `config-changed` event with
  * the new config after every change. Only non-default options are written to YAML. */
-import {DEFAULT_CONFIG, COLOR_KEYS, cleanConfig, validColor, escapeHTML as esc} from "./shared.js?v=0.1.0-beta.1";
+import {DEFAULT_CONFIG, COLOR_KEYS, cleanConfig, validColor, escapeHTML as esc} from "./shared.js?v=0.1.0-beta.2";
 
 const select = options => ({select: {mode: "dropdown", options: options.map(([value, label]) => ({value, label}))}});
 const SCHEMA = [

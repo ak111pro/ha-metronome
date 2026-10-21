@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.1.0-beta.2 (2026-10-21)
+
+First regular (non-pre-release) beta, so HACS offers a version instead of a commit.
+No code changes since 0.1.0-beta.1.
+
+- README: screenshots, CI/HACS/release badges, absolute image and link URLs so the README
+  renders in HACS.
+
 ## 0.1.0-beta.1 (2026-10-21)
 
 First public version (pre-release). Tested on Android (Galaxy S21 Ultra), iPhone 14 (iOS 27)
