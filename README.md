@@ -145,6 +145,8 @@ Vibration is off by default and is a local, per-page setting (Advanced → Hapti
 app's haptic types (light, medium, heavy, success, warning, failure, selection) on each press. Haptics run on their own
 clock: they continue when the system pauses the sound (see below).
 
+**iPhone:** the app's haptics follow iOS's own haptic settings. If nothing vibrates (Test vibration included), open iOS Settings → Sounds & Haptics and turn on haptic feedback (System Haptics; on the owner's iPhone 14 with iOS 27 enabling keyboard haptic feedback there made it work). The iPad has no haptic engine.
+
 A phone in silent/mute/vibrate-off sound mode (for example Samsung's "Mute" mode) can suppress app vibration entirely; the card says so under Haptics. There is no intensity control.
 
 ## iPhone and iPad (audio session)
