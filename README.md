@@ -15,6 +15,21 @@ app on an Android phone (Samsung Galaxy S21 Ultra), an iPhone 14 (iOS 27.0.1) an
 (iPadOS 26.7.1), plus desktop Chromium. Details in [TESTING.md](docs/TESTING.md). This is a
 beta: expect rough edges, and please report issues.
 
+## Screenshots
+
+<table>
+  <tr>
+    <td align="center"><img src="docs/images/full-idle-light.png" width="260" alt="Full card, idle, light theme: tempo dial at 96 BPM with Tap, transport row and timer dial"><br><sub>Full card · idle · light</sub></td>
+    <td align="center"><img src="docs/images/full-playing-dark.png" width="260" alt="Full card playing in dark theme: Active status, beat dots and the timer counting down with its finish time"><br><sub>Playing with timer · dark</sub></td>
+    <td align="center"><img src="docs/images/advanced-dark.png" width="260" alt="Advanced view: rhythm, sound, output, haptics and diagnostics settings"><br><sub>Advanced settings</sub></td>
+  </tr>
+  <tr>
+    <td align="center"><img src="docs/images/compact-tile-light.png" width="260" alt="Compact cards (bottom and inline) next to native HA Tile cards, light theme"><br><sub>Compact (bottom / inline) next to native Tiles</sub></td>
+    <td align="center"><img src="docs/images/compact-tile-dark.png" width="260" alt="Compact cards next to native Tile cards, dark theme"><br><sub>Compact · dark</sub></td>
+    <td align="center"><img src="docs/images/full-idle-dark.png" width="260" alt="Full card, idle, dark theme"><br><sub>Full card · idle · dark</sub></td>
+  </tr>
+</table>
+
 ## What is included
 
 - Named integration instances with a media player, tempo/duration numbers, meter/count-in selects, timer/accent switches, session events and expected-finish timestamp.
