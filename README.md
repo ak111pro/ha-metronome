@@ -1,5 +1,11 @@
 # Home Assistant Metronome
 
+[![Validate](https://github.com/ak111pro/ha-metronome/actions/workflows/validate.yml/badge.svg)](https://github.com/ak111pro/ha-metronome/actions/workflows/validate.yml)
+[![Tests](https://github.com/ak111pro/ha-metronome/actions/workflows/tests.yml/badge.svg)](https://github.com/ak111pro/ha-metronome/actions/workflows/tests.yml)
+[![HACS Custom](https://img.shields.io/badge/HACS-Custom-orange.svg)](https://hacs.xyz)
+[![Release](https://img.shields.io/github/v/release/ak111pro/ha-metronome?include_prereleases)](https://github.com/ak111pro/ha-metronome/releases)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+
 **0.1.0-beta.1 · beta, experimental · AI-assisted (built with Codex and Claude) · MIT licence**
 
 A custom integration and dashboard card that play a metronome on the phone or browser you are
