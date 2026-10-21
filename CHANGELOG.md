@@ -1,5 +1,23 @@
 # Changelog
 
+## 0.1.0-alpha.7 (unreleased)
+
+From the first iPhone 14 / iPad Pro test (Companion app).
+
+### Fixed
+
+- iPhone silent switch muted the metronome: the output page now uses the "playback" audio
+  session (other apps' audio pauses while it plays).
+- iOS haptics: sent as the app's own external-bus `haptic` message, preferred over any
+  `navigator.vibrate` inside the iOS app; haptics and beat dots no longer stop when the
+  system pauses the sound.
+- Volume slider: draggable on iPad, no second (native) handle on iPhone.
+
+### Added
+
+- Advanced → Haptics "Test vibration"; Advanced → Diagnostics, also logged once to HA when a
+  page takes output.
+
 ## 0.1.0-alpha.6 (unreleased)
 
 From the owner's alpha.5 re-test.

@@ -1,16 +1,25 @@
 # Validation record and next-stage test plan
 
-## Status (2026-10-21, 0.1.0-alpha.6)
+## Status (2026-10-21, 0.1.0-alpha.7)
 
 | Area | Status |
 | --- | --- |
-| Backend in HA (pytest) | **Verified**: 74 tests, HA 2026.10.1 harness |
+| Backend in HA (pytest) | **Verified**: 75 tests, HA 2026.10.1 harness |
 | hassfest 2026.10.1 | **Passes** without warnings (run locally) |
 | HACS action | Not run yet (needs the GitHub repository) |
 | Live HA instance (websocket, REST, restart) | **Verified** on the ha-dev test instance (HA 2026.10.2) |
 | Card in a real browser | **Rendered and driven** in headless Chromium 155 (no audible output) |
 | Android Companion app | **Owner tests** (Galaxy S21 Ultra, 2026-10-20): alpha.1 audio and vibration work (vibration needs the phone out of Samsung "Mute" mode); alpha.2 re-test confirmed its fixes and asked for the changes in alpha.3 (below); alpha.3/alpha.4 re-test passed except the requests done in alpha.5 (below); alpha.5 re-test: Tile play and compact card OK, three requests done in alpha.6 (below); alpha.6 re-test pending |
-| iOS Companion app, audio timing, accessibility | **Not tested** — needs real devices |
+| iOS Companion app | **First test** (iPhone 14 iOS 27.0.1, iPad Pro iPadOS 26.7.1): iPad sound OK, volume not draggable; iPhone silent (silent switch, confirmed), no haptics, double volume handle — fixed in alpha.7, re-test pending |
+| Audio timing, accessibility | **Not tested** — needs real devices |
+
+### First iOS test (alpha.6)
+
+iPad Pro: sound works; no haptics (no haptic engine, expected); other apps' audio or leaving
+HA stops it (expected); the volume handle cannot be dragged. iPhone 14: no sound (the silent
+switch; sound works with it off) and no haptics even with sound; the volume bar shows a second
+thin handle (the native WebKit range thumb). Fixed in alpha.7, haptics root cause still open
+(see README → iPhone and iPad; the next test reads Advanced → Diagnostics).
 
 ### Owner's Android re-test of alpha.5
 
@@ -141,6 +150,7 @@ re-run for alpha.3 where noted:
 | `compact.py` (alpha.5) | Tile-style compact card at 264–500 px (36 px icon circle, 42 px / 12 px-radius features, nothing outside, no expand button, inline beside the name above 340 px, else bottom); icon/name button opens the dialog by Enter and tap; BPM pulse keyframes per feedback mode, accent stronger, count-in colour, reduced motion without scale; real session from the Tile pulses the number | all pass |
 | `dialog.py` (alpha.6) | Expanded dialog at 360x800, 384x854, 412x915 and 360x640, light/dark, timer open: X on the title row, dial 56 px below the top, timer fits or a swipe on an arc scrolls to its end; Advanced header clear of the X and scrollable | 32/32 |
 | `handle_only.py` (alpha.6) | BPM and timer dial: tap/click on the track and a tap on the handle change nothing (HA value, number/fields, knob); swipe from the track scrolls; handle drag changes the value without scrolling | 10/10 (old build 4/10) |
+| `ios_fixes.py` (alpha.7, Chromium only) | Volume: no native range input; tap, mouse drag, touch drag, keyboard; marker inside the fill at 0/1/5/10/100 %. Context suspended while playing: session continues, beats and haptic pulses continue, "No sound" message; a tap resumes tones. Diagnostics content; Test vibration | see report |
 | `count_in.py` | Count-in dots/glow in `--accent-color`, exercise beats in the active colour, also with reduced motion; status "Count-in" → "Active" (full and compact), HA `phase` count_in → running with state `playing` (alpha.6) | passes |
 
 The iOS path is simulated (no `navigator.vibrate`, a stub external bus); HA's frontend
