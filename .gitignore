@@ -6,3 +6,7 @@ __pycache__/
 node_modules/
 .DS_Store
 *.tok
+# Browser check output (screenshots, logs) if written inside the repo
+checks/**/*.png
+checks/**/*.log
+checks/out/

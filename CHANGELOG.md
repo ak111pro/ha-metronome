@@ -1,6 +1,31 @@
 # Changelog
 
-## 0.1.0-alpha.9 (unreleased)
+## 0.1.0-beta.1 (2026-10-21)
+
+First public version (pre-release). Tested on Android (Galaxy S21 Ultra), iPhone 14 (iOS 27)
+and iPad Pro (iPadOS 26) in the Companion app, HA 2026.10.1/2026.10.2.
+
+### Highlights since the first alpha
+
+- **Install:** HACS custom repository; the card resource is registered (and kept at the
+  current version) automatically in storage-mode dashboards.
+- **Play from anywhere:** Start in the card, or Play on a native Tile, in more-info or on the
+  device page. The phone you tap on plays; automations use the selected device.
+- **Card:** full card with BPM and timer dials (drag the handle only), a fifth "Advanced"
+  button, count-in status, smooth countdown; a compact card in Tile style (inline or bottom
+  controls, pulsing BPM number); primary/secondary colour options; a working visual editor.
+- **Sound:** every click at −1 dBFS (accent by pitch), volume slider that works on iOS.
+- **iOS:** sound with the silent switch on, recovery after another app took the audio,
+  haptics through the Companion app (needs iOS haptic feedback enabled).
+- **HA:** media_player `phase` attribute (`count_in`/`running`), session events, expected
+  finish sensor; optional diagnostics (Advanced toggle, debug log).
+
+### Details
+
+The per-alpha notes below record every change.
+
+
+## 0.1.0-alpha.9
 
 From the alpha.8 re-test (everything passed on the iPhone; haptics need iOS haptic feedback
 enabled).
@@ -12,7 +37,7 @@ enabled).
 - Diagnostics are behind an Advanced → "Show diagnostics" toggle (off by default, per page);
   the HA log line is debug level.
 
-## 0.1.0-alpha.8 (unreleased)
+## 0.1.0-alpha.8
 
 From the alpha.7 iOS re-test (silent switch, volume and Tile play confirmed fixed).
 
@@ -28,7 +53,7 @@ From the alpha.7 iOS re-test (silent switch, volume and Tile play confirmed fixe
 - Idle timer arc uses the same muted colour as the idle BPM arc; the running countdown moves
   smoothly (every frame; whole seconds with reduced motion).
 
-## 0.1.0-alpha.7 (unreleased)
+## 0.1.0-alpha.7
 
 From the first iPhone 14 / iPad Pro test (Companion app).
 
@@ -46,7 +71,7 @@ From the first iPhone 14 / iPad Pro test (Companion app).
 - Advanced → Haptics "Test vibration"; Advanced → Diagnostics, also logged once to HA when a
   page takes output.
 
-## 0.1.0-alpha.6 (unreleased)
+## 0.1.0-alpha.6
 
 From the owner's alpha.5 re-test.
 
@@ -63,7 +88,7 @@ From the owner's alpha.5 re-test.
 - Expanded dialog: the close button is on the title row and the dial starts right below the
   title.
 
-## 0.1.0-alpha.5 (unreleased)
+## 0.1.0-alpha.5
 
 From the owner's alpha.3/alpha.4 re-test.
 
@@ -81,7 +106,7 @@ From the owner's alpha.3/alpha.4 re-test.
   expand button: tap the icon/name to open the full card. The BPM number pulses and glows on
   each beat (respects `feedback` and reduced motion).
 
-## 0.1.0-alpha.4 (unreleased)
+## 0.1.0-alpha.4
 
 From the owner's alpha.3 re-test (everything else passed).
 
@@ -95,7 +120,7 @@ From the owner's alpha.3 re-test (everything else passed).
 - The timer's "Ends …" time uses a 24-hour clock unless the HA profile's time format is set
   to 12-hour explicitly.
 
-## 0.1.0-alpha.3 (unreleased)
+## 0.1.0-alpha.3
 
 Second pass after the owner's Android re-test of alpha.2 (which confirmed the alpha.2 fixes).
 

@@ -1,10 +1,19 @@
 # Home Assistant Metronome
 
-**0.1.0-alpha.9 · louder clicks (−1 dBFS), diagnostics behind a toggle; still for review and device testing**
+**0.1.0-beta.1 · beta, experimental · AI-assisted (built with Codex and Claude) · MIT licence**
 
-A custom integration and dashboard card that play a metronome on the foreground phone or browser. Target environment: Home Assistant Core **2026.10.1**, Docker on a Raspberry Pi 4 (8 GB), with Android and iOS Companion apps.
+A custom integration and dashboard card that play a metronome on the phone or browser you are
+holding. Home Assistant keeps the shared settings and session; the clicks are synthesized on
+the foreground device (Web Audio), not on the server.
 
-This repository contains the integration, the card, installation examples, an HA test suite and the original [handoff](docs/HANDOFF.md). The backend is tested with Home Assistant 2026.10.1 and was run on a test instance; the card has been rendered in a desktop browser. It has **not yet been tested on either Companion app** (see [TESTING.md](docs/TESTING.md)). It is not yet a public release or a HACS package.
+> **Why this exists:** I got tired of looking for a good free metronome app. I mainly use one for my calisthenics workouts: during handstands or back levers you can't really look at a stopwatch, so I count seconds with a metronome while I train. That's also why it comes with a timer, as a double check in case I lose count of the seconds. It's just as useful for music practice. And all of it runs in Home Assistant, with HA's native look.
+
+**Requirements:** Home Assistant **2026.10.1** or newer.
+
+**Tested on** Home Assistant 2026.10.1 (test suite) and 2026.10.2 (live), with the Companion
+app on an Android phone (Samsung Galaxy S21 Ultra), an iPhone 14 (iOS 27.0.1) and an iPad Pro
+(iPadOS 26.7.1), plus desktop Chromium. Details in [TESTING.md](docs/TESTING.md). This is a
+beta: expect rough edges, and please report issues.
 
 ## What is included
 
@@ -14,31 +23,61 @@ This repository contains the integration, the card, installation examples, an HA
 - 2/4, 3/4, 4/4 and 6/8. In 6/8, BPM counts **two dotted-quarter beats per bar**. Subdivisions are not part of this version.
 - Optional countdown, 5–120-second dial, separate hours/minutes/seconds fields up to 99:59:59, pause/resume, actual expected finish time, count-in and completion sound.
 - Volume (a drag-anywhere 48 px slider with keyboard support), mute, accent and capability-dependent vibration. Haptic pulse length is available; vibration intensity is not exposed. See [Haptics](#haptics).
-- Web Audio scheduling on the selected foreground device. The Pi manages state and settings; it does not synthesize or stream the beats.
+- Web Audio scheduling on the selected foreground device. Home Assistant manages state and settings; it does not synthesize or stream the beats.
 
-## Install for testing
+## Install
 
-1. Copy the entire `custom_components/metronome` directory into the Home Assistant configuration volume, at `/config/custom_components/metronome` **inside the container**. Use the host directory that is already bind-mounted to `/config`; do not assume the host path is also `/config`.
-2. Restart Home Assistant, then add **Metronome** under **Settings → Devices & services → Add integration**. Give the instance a name. Multiple instances are supported.
-3. Add a dashboard resource of type **JavaScript module** with this URL:
+### HACS (custom repository)
 
-   ```text
-   /metronome/metronome-card.js?v=0.1.0-alpha.9
-   ```
-
-   Dashboard resources may require Advanced Mode in the user profile. For YAML-managed resources, use `examples/resource.yaml` in the existing Lovelace resources configuration. Do not create a second conflicting Lovelace configuration.
-
-4. Add a **Metronome** card using the visual card picker, or paste:
+1. HACS → ⋮ → **Custom repositories** → add `https://github.com/ak111pro/ha-metronome`,
+   category **Integration**.
+2. Download **Metronome** in HACS and restart Home Assistant.
+3. **Settings → Devices & services → Add integration → Metronome.** Give the instance a name;
+   several instances are supported.
+4. The card's JavaScript is registered as a dashboard resource **automatically**
+   (`/metronome/metronome-card.js?v=<version>`, updated on every start, never duplicated).
+   Reload the dashboard page (or the app) once.
+5. Add a **Metronome** card with the card picker, or:
 
    ```yaml
    type: custom:metronome-card
    entity: media_player.metronome
    ```
 
-   Replace the entity ID with the media player created by your instance. HA chooses the actual ID from the device name and existing entities.
-5. On the phone/browser that should play sound, open the card and tap **Start**. This user gesture enables local audio and selects that client as output. Keep the app visible.
+   Use the media player your instance created.
+6. On the phone or browser that should play, tap **Start** (or Play on a Tile, see below) and
+   keep the app in the foreground.
 
-There is no separate audio dependency, Node build step or software to install on the Raspberry Pi. The JS modules are bundled inside the integration and served by HA. Refresh the frontend after replacing files or reloading the integration.
+**Dashboard resources in YAML mode** (`lovelace: resource_mode: yaml`): the integration cannot
+add the resource and logs the URL instead. Add it yourself as a JavaScript module, e.g.
+`examples/resource.yaml`:
+
+```yaml
+lovelace:
+  resources:
+    - url: /metronome/metronome-card.js?v=0.1.0-beta.1
+      type: module
+```
+
+### Manual
+
+Copy `custom_components/metronome` to `<config>/custom_components/metronome`, restart, then
+continue with step 3 above. There is no build step and nothing to install on the server; the
+card modules are served by the integration.
+
+Removing the last Metronome instance also removes the card resource.
+
+## Known limits
+
+- Foreground only: leaving the app, locking the screen or another app taking the audio stops
+  the metronome; nothing plays in the background and sessions never resume automatically.
+- iPhone: the ring/silent switch is handled (the output page uses the "playback" audio
+  session, which pauses other apps' audio while it plays). Haptics need iOS haptic feedback
+  turned on (Settings → Sounds & Haptics, see [Haptics](#haptics)).
+- Haptics depend on the device: Android `navigator.vibrate`, iOS through the Companion app;
+  no haptic engine (iPad) means no vibration.
+- YAML-mode dashboard resources need the manual resource step above.
+- No speaker or casting output: sound always comes from a page's own audio.
 
 ## Playback and device selection
 
@@ -145,7 +184,7 @@ Vibration is off by default and is a local, per-page setting (Advanced → Hapti
 app's haptic types (light, medium, heavy, success, warning, failure, selection) on each press. Haptics run on their own
 clock: they continue when the system pauses the sound (see below).
 
-**iPhone:** the app's haptics follow iOS's own haptic settings. If nothing vibrates (Test vibration included), open iOS Settings → Sounds & Haptics and turn on haptic feedback (System Haptics; on the owner's iPhone 14 with iOS 27 enabling keyboard haptic feedback there made it work). The iPad has no haptic engine.
+**iPhone:** the app's haptics follow iOS's own haptic settings. If nothing vibrates (Test vibration included), open iOS Settings → Sounds & Haptics and turn on haptic feedback (System Haptics; on the tested iPhone 14 with iOS 27, enabling keyboard haptic feedback there made it work). The iPad has no haptic engine.
 
 A phone in silent/mute/vibrate-off sound mode (for example Samsung's "Mute" mode) can suppress app vibration entirely; the card says so under Haptics. There is no intensity control.
 
@@ -213,7 +252,7 @@ pytest -q
 ruff check custom_components tests checks && ruff format --check custom_components tests checks
 ```
 
-The two small checks cover pure countdown/state transitions and frontend math. `tests/` runs the integration inside Home Assistant (config flow, lifecycle, entities, countdown with frozen time, websocket ownership and permissions). None of them measure audio accuracy or Companion behavior. Read [TESTING.md](docs/TESTING.md) before promoting this alpha. Licensed under the MIT licence (see [LICENSE](LICENSE)).
+The two small checks cover pure countdown/state transitions and frontend math. `tests/` runs the integration inside Home Assistant (config flow, lifecycle, entities, countdown with frozen time, websocket ownership and permissions). None of them measure audio accuracy or Companion behavior. Read [TESTING.md](docs/TESTING.md) before relying on it; device results are summarised there. Licensed under the MIT licence (see [LICENSE](LICENSE)).
 
 ## Credits
 

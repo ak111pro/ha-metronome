@@ -1,5 +1,8 @@
 # Handoff to Opus 5.5
 
+> Historical document (the original handoff of 0.1.0-alpha.1). Newer owner decisions, recorded
+> in the README, CHANGELOG and the "Owner decisions" section below, override it.
+
 ## Assignment
 
 Create the repository, perform full testing, fix issues found and continue development from this implementation. The user explicitly assigned repository creation and comprehensive testing to the next stage. This package is a source handoff, not proof of HA or mobile compatibility. No Git repository, remote repository, deployment or live HA change has been made by this build.

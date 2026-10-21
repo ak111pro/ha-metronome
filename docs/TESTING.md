@@ -1,23 +1,34 @@
 # Validation record and next-stage test plan
 
-## Status (2026-10-21, 0.1.0-alpha.9)
+## Status (2026-10-21, 0.1.0-beta.1)
 
 | Area | Status |
 | --- | --- |
-| Backend in HA (pytest) | **Verified**: 75 tests, HA 2026.10.1 harness |
+| Backend in HA (pytest) | **Verified**: 82 tests, HA 2026.10.1 harness |
 | hassfest 2026.10.1 | **Passes** without warnings (run locally) |
-| HACS action | Not run yet (needs the GitHub repository) |
+| HACS action | Not run yet (runs in CI once the repository is public) |
 | Live HA instance (websocket, REST, restart) | **Verified** on the ha-dev test instance (HA 2026.10.2) |
 | Card in a real browser | **Rendered and driven** in headless Chromium 155 (no audible output) |
-| Android Companion app | **Owner tests** (Galaxy S21 Ultra, 2026-10-20): alpha.1 audio and vibration work (vibration needs the phone out of Samsung "Mute" mode); alpha.2 re-test confirmed its fixes and asked for the changes in alpha.3 (below); alpha.3/alpha.4 re-test passed except the requests done in alpha.5 (below); alpha.5 re-test: Tile play and compact card OK, three requests done in alpha.6 (below); alpha.6 re-test pending |
-| iOS Companion app | **First test** (iPhone 14 iOS 27.0.1, iPad Pro iPadOS 26.7.1): iPad sound OK, volume not draggable; iPhone silent (silent switch, confirmed), no haptics, double volume handle — alpha.7 re-test: silent switch, volume, Tile play fixed; haptics still silent on the iPhone (card sends the same external-bus message as HA, cause on the device/app side, under investigation); recovery after YouTube and Diagnostics fixed in alpha.8, re-test pending |
+| Android Companion app | **Owner tests** (Galaxy S21 Ultra, 2026-10-20): alpha.1 audio and vibration work (vibration needs the phone out of Samsung "Mute" mode); alpha.2 re-test confirmed its fixes and asked for the changes in alpha.3 (below); alpha.3/alpha.4 re-test passed except the requests done in alpha.5 (below); alpha.5 re-test: Tile play and compact card OK, three requests done in alpha.6 (below); alpha.6 onwards: all passed (alpha.9 final) |
+| iOS Companion app | **First test** (iPhone 14 iOS 27.0.1, iPad Pro iPadOS 26.7.1): iPad sound OK, volume not draggable; iPhone silent (silent switch, confirmed), no haptics, double volume handle — alpha.7 re-test: silent switch, volume, Tile play fixed; haptics still silent on the iPhone (card sends the same external-bus message as HA, cause on the device/app side, under investigation); recovery after YouTube and Diagnostics fixed in alpha.8; **alpha.8/alpha.9: all passed** (see "iOS results") |
 | Audio timing, accessibility | **Not tested** — needs real devices |
+
+### iOS results (summary)
+
+| Item | iPhone 14 (iOS 27.0.1) | iPad Pro (iPadOS 26.7.1) |
+| --- | --- | --- |
+| Sound | Works, also with the ring/silent switch on ("playback" audio session, alpha.7) | Works |
+| Haptics | Work through the Companion app once iOS haptic feedback is enabled (Settings → Sounds & Haptics) | No haptic engine (expected) |
+| Recovery after another app (YouTube) took the audio | Works (fresh AudioContext in the tap, alpha.8) | – |
+| Volume slider | Works, single marker (alpha.7) | Draggable (alpha.7) |
+| Tile / more-info Play without Start | Works | – |
 
 ### iOS re-test of alpha.8
 
 Everything passed on the iPhone; haptics needed iOS haptic feedback turned on. alpha.9 changes
 loudness (−1 dBFS) and puts Diagnostics behind a toggle; browser checks were not run for it
-(host swap at 72 %, planned after the production restart).
+(host swap at 72 %, planned after the production restart). beta.1 adds the automatic card
+resource (pytest, and verified on ha-dev: the existing resource updated in place).
 
 ### iOS re-test of alpha.7
 
