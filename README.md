@@ -153,6 +153,7 @@ Pause is available only when the timer is enabled. It preserves the remaining ti
 | `show_signature` | `true` | Show the meter below BPM |
 | `show_timer` | `true` | Show timer controls and countdown |
 | `show_advanced` | `true` | Show the Advanced button (fifth button of the transport row) |
+| `show_step_buttons` | `true` | Show the −1/+1 buttons (BPM and timer dials, compact tempo row). `false` hides them; tempo then changes by dragging the handle, typing or Tap, the timer by its fields; the compact card keeps the BPM number |
 | `feedback` | `dots_glow` | `dots`, `dots_glow`, `off`. Compact card: the BPM number pulses (`dots`) and glows (`dots_glow`) on each beat |
 | `features_position` | `bottom` | Compact card: `bottom` (tempo row below the name) or `inline` (beside the name, like the Tile card's features position; falls back to bottom on cards of 340 px and narrower) |
 | `timer_display` | `remaining_finish` | `remaining`, `remaining_finish` |

@@ -32,6 +32,7 @@ STATE = f"""(() => {{
       meta: (r.querySelector('.metadata') || r.querySelector('.compact-info .meta'))?.textContent,
       timer: shown(r.querySelector('[data-action=timer]')),
       advanced: shown(r.querySelector('[data-action=advanced]')),
+      steps: shown(r.querySelector('[data-action=plus]')),
       feedbackOff: r.querySelector('ha-card').classList.contains('feedback-off'),
       timerDisplay: p.config.timer_display, primary: getComputedStyle(p).getPropertyValue('--metronome-primary-color').trim(),
       secondary: getComputedStyle(p).getPropertyValue('--metronome-secondary-color').trim()}}}};
@@ -115,6 +116,7 @@ def no_defaults(config):
         "timer_display": "remaining_finish",
         "features_position": "bottom",
         "show_title": True,
+        "show_step_buttons": True,
     }
     return [k for k, v in config.items() if defaults.get(k, object()) == v]
 
@@ -188,6 +190,20 @@ async def main():
             "show_advanced off",
             [switch("Show Advanced button")],
             check(yaml_show_advanced=False, advanced=False),
+        )
+        await step(
+            cdp,
+            results,
+            "show_step_buttons off",
+            [switch("Show −1/+1 buttons")],
+            check(yaml_show_step_buttons=False, steps=False),
+        )
+        await step(
+            cdp,
+            results,
+            "show_step_buttons on",
+            [switch("Show −1/+1 buttons")],
+            check(yaml_show_step_buttons=None, steps=True),
         )
         await step(
             cdp,

@@ -15,6 +15,7 @@ const SCHEMA = [
     {name: "show_signature", selector: {boolean: {}}},
     {name: "show_timer", selector: {boolean: {}}},
     {name: "show_advanced", selector: {boolean: {}}},
+    {name: "show_step_buttons", selector: {boolean: {}}},
   ]},
   {name: "feedback", required: true, selector: select([["dots_glow", "Dots and subtle glow"], ["dots", "Dots"], ["off", "Off"]])},
   {name: "features_position", required: true, selector: select([["bottom", "Bottom"], ["inline", "Inline (next to the name)"]])},
@@ -25,7 +26,7 @@ const SCHEMA = [
 const LABELS = {
   entity: "Metronome entity", name: "Name (optional)", layout: "Layout",
   show_title: "Show title", show_tempo: "Show tempo marking", show_signature: "Show time signature",
-  show_timer: "Show timer controls", show_advanced: "Show Advanced button",
+  show_timer: "Show timer controls", show_advanced: "Show Advanced button", show_step_buttons: "Show −1/+1 buttons",
   feedback: "Beat feedback", features_position: "Compact: tempo controls position", timer_display: "Timer display",
   primary_color: "Primary colour", secondary_color: "Secondary colour",
 };

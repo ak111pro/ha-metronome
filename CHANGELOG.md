@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.1.0-beta.3 (unreleased)
+
+### Changed
+
+- Expanded dialog: the close button sits at the top left like HA's more-info dialog, with
+  the title next to it, and its focus ring stays inside the dialog. In the Advanced view Back
+  takes that corner (Escape or a tap outside still close the dialog).
+
+### Added
+
+- Card option `show_step_buttons` (default `true`): hide the −1/+1 buttons of both dials and
+  of the compact card's tempo row; the dials move up to close the gap.
+
 ## 0.1.0-beta.2 (2026-10-21)
 
 First regular (non-pre-release) beta, so HACS offers a version instead of a commit.

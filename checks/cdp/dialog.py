@@ -1,4 +1,4 @@
-"""Expanded dialog from the compact card: close button on the title row, little space
+"""Expanded dialog from the compact card: close button at the top left of the title row (beta.3, like HA more-info), little space
 above the dial, and the whole content (timer open; Advanced) reachable by scrolling.
 
 python dialog.py [out-dir]   Phones 360x800, 384x854 (Galaxy S21 Ultra), 412x915 and a short
@@ -21,8 +21,11 @@ MEASURE = f"""(() => {{ const d = {DIALOG}, r = {INNER}.shadowRoot;
   const timer = box(r.querySelector('.timer-dial svg'));
   return {{dialog: [Math.round(db.top), Math.round(db.bottom), Math.round(db.width)],
     closeCenter: Math.round(x.top + x.height / 2 - db.top), titleCenter: Math.round(title.top + title.height / 2 - db.top),
-    titleCentred: Math.abs((title.left + title.right) / 2 - (db.left + db.right) / 2) < 2,
-    titleClear: title.right <= x.left, dialTop: Math.round(dial.top - db.top), titleToDial: Math.round(dial.top - title.bottom),
+    // beta.3: X at the top left like HA's more-info, title left-aligned after it; the focus
+    // ring (2 px, inside the button) keeps >= 6 px from the dialog edge.
+    titleCentred: title.left >= x.right + 8 && x.left - db.left >= 8 && x.top - db.top >= 8,
+    titleClear: title.left >= x.right,
+    ringInset: Math.min(x.left - db.left, x.top - db.top) + parseFloat(getComputedStyle(d.querySelector('.dialog-close')).outlineOffset), dialTop: Math.round(dial.top - db.top), titleToDial: Math.round(dial.top - title.bottom),
     scrollable: d.scrollHeight > d.clientHeight + 1, scrollTop: d.scrollTop,
     timerOpen: r.querySelector('.timer-panel').classList.contains('open'),
     timerBottomVisible: timer.bottom <= db.bottom + 0.5 && timer.height > 0}}; }})()"""
@@ -32,7 +35,8 @@ ADV = f"""(() => {{ const d = {DIALOG}, r = {INNER}.shadowRoot, db = d.getBoundi
   const crumb = r.querySelector('.subheader .name').getBoundingClientRect();
   const items = [...r.querySelectorAll('.advanced-view *')].filter(e => e.offsetParent);
   const last = Math.max(...items.map(e => e.getBoundingClientRect().bottom));
-  return {{overlap: crumb.right > x.left || back.right > x.left, closeVisible: x.top >= db.top,
+  // Advanced: Back takes the top-left corner, the X is hidden there.
+  return {{overlap: d.querySelector('.dialog-close').offsetParent !== null, closeVisible: back.left - db.left >= 6 && back.top - db.top >= 6,
     lastVisible: last <= db.bottom + 0.5, scrollTop: d.scrollTop}}; }})()"""
 
 
@@ -72,7 +76,8 @@ async def main():
                     f"{tag} X on the title row",
                     abs(m["closeCenter"] - m["titleCenter"]) <= 4
                     and m["titleCentred"]
-                    and m["titleClear"],
+                    and m["titleClear"]
+                    and m["ringInset"] >= 6,
                     m,
                 )
                 check(

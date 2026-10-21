@@ -106,7 +106,7 @@ export class MetronomeCard extends HTMLElement {
 
   build() {
     this.advanced = false;
-    this.shadowRoot.innerHTML = `<style>${styles}</style><ha-card class="idle${this.config.layout === "compact" ? " compact" : ""}">
+    this.shadowRoot.innerHTML = `<style>${styles}</style><ha-card class="idle${this.config.layout === "compact" ? " compact" : ""}${this.config.show_step_buttons ? "" : " no-steps"}">
       <section class="main" aria-label="Metronome">
       ${this.config.layout === "compact" ? `
         <div class="compact-grid${this.config.features_position === "inline" ? " inline" : ""}">
@@ -216,6 +216,7 @@ export class MetronomeCard extends HTMLElement {
     if (action === "advanced" || action === "back") {
       this.advanced = action === "advanced";
       this.update();
+      this.dispatchEvent(new CustomEvent("metronome-view", {detail: {advanced: this.advanced}}));
       this.$(this.advanced ? '[data-action="back"]' : '[data-action="advanced"]')?.focus();
       return;
     }
@@ -641,12 +642,15 @@ export class MetronomeCard extends HTMLElement {
     if (!dialog) {
       dialog = document.createElement("dialog");
       dialog.setAttribute("aria-label",this.config.name || "Metronome controls");
-      // Close sits on the title row (top right); the inner card's header is tightened.
+      // Like HA's more-info dialog: round X at the top left, the title next to it. In the
+      // Advanced sub-view Back takes that corner and the X is hidden (Escape, a tap outside
+      // and Back still work).
       dialog.innerHTML = button("close","Close","close","dialog-close");
       const card = document.createElement("metronome-card");
       card.setAttribute("in-dialog","");
       card.setConfig({...this.config,layout:"full",show_title:true}); card.hass = this._hass;
       dialog.append(card); this.shadowRoot.append(dialog);
+      card.addEventListener("metronome-view", event => { dialog.querySelector(".dialog-close").hidden = event.detail.advanced; });
       dialog.querySelector("button").addEventListener("click",() => dialog.close());
       dialog.addEventListener("click",event => { if (event.target === dialog) dialog.close(); });
       dialog.addEventListener("close",() => { dialog.remove(); this.$('[data-action="expand"]')?.focus(); });

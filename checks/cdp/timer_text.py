@@ -3,7 +3,7 @@
 python timer_text.py [out-dir]
 Card widths 264 (a 280 px phone in Sections) to 500 px, text at 100 % and 130 % (Android
 text zoom, emulated by scaling every font-size and px line-height in the card by 1.3),
-for 30:00:32 (outside the dial range: hint shown), 45 s (unit hint) and the longest
+with and without the -1/+1 buttons (show_step_buttons), for 30:00:32 (outside the dial range: hint shown), 45 s (unit hint) and the longest
 finish label of a running countdown ("Ends Oct 21, 12:59:59 PM", 12 h with a date). Measures the text's own line boxes (Range rects) against
 the inner edge of the 24-unit stroke, radius 133 of 320, minus a 2 px margin.
 """
@@ -67,49 +67,57 @@ async def main():
     async with aiohttp.ClientSession() as session:
         cdp = await open_page(session, 376, 1600)
         await login(cdp, theme="dark", wait=15)
-        for duration in (108032, 45, "running"):
-            # "running": a long finish label as while playing, set before every measurement
-            # (the card's 100 ms clock is paused for it).
-            if duration != "running":
-                await cdp.js(
-                    f"{FULL}.player.action('configure', "
-                    f"{{timer_enabled: true, duration: {duration}}})"
-                )
-                await cdp.js(f"{FULL}.selectedField = 0; 1")
-                await cdp.idle(1)
-            for width in (264, 280, 320, 360, 440, 500):
-                await cdp.call(
-                    "Emulation.setDeviceMetricsOverride",
-                    width=width + 16,
-                    height=1600,
-                    deviceScaleFactor=1,
-                    mobile=True,
-                )
-                await cdp.idle(0.8)
-                for zoom in (1, 1.3):
-                    await cdp.js(f"{ZOOM}({FULL}, {zoom})")
-                    if duration == "running":
-                        await cdp.js(
-                            f"(c => {{ clearInterval(c.tick); c.shadowRoot.querySelector("
-                            f"'.timer-hint').textContent = 'Ends Oct 21, 12:59:59 PM';"
-                            f" return 1; }})({FULL})"
-                        )
-                    await cdp.idle(0.3)
-                    m = await cdp.js(MEASURE)
-                    rows.append((duration, width, zoom, m))
-                    print(
-                        f"{duration:>7} card {m['card']} zoom {zoom}: inner {m['inner']} worst "
-                        f"{m['worst']} hint {m['hint']!r}"
-                        + (f" OUTSIDE {m['outside']}" if m["outside"] else "")
+        for steps in (True, False):
+            # beta.3: also without the -1/+1 buttons (show_step_buttons: false).
+            await cdp.js(
+                f"{FULL}.setConfig({{...{FULL}.config, show_step_buttons: {'true' if steps else 'false'}}}); 1"
+            )
+            await cdp.idle(0.5)
+            for duration in (108032, 45, "running"):
+                # "running": a long finish label as while playing, set before every measurement
+                # (the card's 100 ms clock is paused for it).
+                if duration != "running":
+                    await cdp.js(
+                        f"{FULL}.player.action('configure', "
+                        f"{{timer_enabled: true, duration: {duration}}})"
                     )
-                    if m["outside"]:
-                        bad.append((duration, width, zoom, m["outside"]))
-                    if out and width in (264, 360) and duration == 108032:
-                        await cdp.js(
-                            f"{FULL}.shadowRoot.querySelector('.timer-dial').scrollIntoView({{block: 'center'}}); 1"
+                    await cdp.js(f"{FULL}.selectedField = 0; 1")
+                    await cdp.idle(1)
+                for width in (264, 280, 320, 360, 440, 500):
+                    await cdp.call(
+                        "Emulation.setDeviceMetricsOverride",
+                        width=width + 16,
+                        height=1600,
+                        deviceScaleFactor=1,
+                        mobile=True,
+                    )
+                    await cdp.idle(0.8)
+                    for zoom in (1, 1.3):
+                        await cdp.js(f"{ZOOM}({FULL}, {zoom})")
+                        if duration == "running":
+                            await cdp.js(
+                                f"(c => {{ clearInterval(c.tick); c.shadowRoot.querySelector("
+                                f"'.timer-hint').textContent = 'Ends Oct 21, 12:59:59 PM';"
+                                f" return 1; }})({FULL})"
+                            )
+                        await cdp.idle(0.3)
+                        m = await cdp.js(MEASURE)
+                        rows.append((steps, duration, width, zoom, m))
+                        print(
+                            f"{'steps' if steps else 'nosteps'} {duration:>7} card {m['card']} zoom {zoom}: inner {m['inner']} worst "
+                            f"{m['worst']} hint {m['hint']!r}"
+                            + (f" OUTSIDE {m['outside']}" if m["outside"] else "")
                         )
-                        await cdp.shot(f"{out}/timer-text-{width}-{int(zoom * 100)}.png")
-                await cdp.js(f"{ZOOM}({FULL}, 1)")
+                        if m["outside"]:
+                            bad.append((steps, duration, width, zoom, m["outside"]))
+                        if out and width in (264, 360) and duration == 108032 and zoom == 1:
+                            await cdp.js(
+                                f"{FULL}.shadowRoot.querySelector('.timer-dial').scrollIntoView({{block: 'center'}}); 1"
+                            )
+                            await cdp.shot(
+                                f"{out}/timer-text-{'steps' if steps else 'nosteps'}-{width}.png"
+                            )
+                    await cdp.js(f"{ZOOM}({FULL}, 1)")
         await cdp.js(f"{FULL}.player.action('configure', {{timer_enabled: false, duration: 30}})")
         await cdp.ws.close()
     print("problems:", len(bad))
