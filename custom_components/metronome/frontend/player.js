@@ -1,7 +1,7 @@
 /* A single engine per HA connection/entity, independent of card attachment.
  * No audio is generated on the HA host. WS sends session changes, never beats.
  */
-import {METERS, HAPTIC_TYPES, beatPosition, hapticMode} from "./shared.js?v=0.1.0-alpha.8";
+import {METERS, HAPTIC_TYPES, TONES, TONE_TAIL, masterGain, beatPosition, hapticMode} from "./shared.js?v=0.1.0-alpha.8";
 
 const REGISTRY = Symbol.for("metronome.players.v1");
 globalThis[REGISTRY] ||= new WeakMap();
@@ -329,6 +329,7 @@ class Player extends EventTarget {
     if (this.audio !== ctx) {
       this.audio = ctx;
       this.master = ctx.createGain();
+      this.lastToneEnd = 0;  // times of the previous context mean nothing here
       this.master.connect(ctx.destination);
       ctx.addEventListener("statechange", () => {
         if (this.audio !== ctx) return;
@@ -357,7 +358,7 @@ class Player extends EventTarget {
   updateGain() {
     if (this.audio && this.master && this.state) {
       const s = this.state.settings;
-      this.master.gain.setTargetAtTime(s.muted ? 0 : s.volume * 0.65, this.audio.currentTime, 0.01);
+      this.master.gain.setTargetAtTime(masterGain(s.volume, s.muted), this.audio.currentTime, 0.01);
     }
   }
 
@@ -397,7 +398,8 @@ class Player extends EventTarget {
     };
     this.nodes.add(oscillator);
     oscillator.start(when);
-    oscillator.stop(when + duration + 0.01);
+    oscillator.stop(when + duration + TONE_TAIL);
+    if (!chime) this.lastToneEnd = Math.max(this.lastToneEnd || 0, when + duration + TONE_TAIL);
   }
 
   /* Beats run on the audio clock when the context runs, otherwise on a silent clock (HA
@@ -434,8 +436,8 @@ class Player extends EventTarget {
         const countIn = index < 0;
         const accent = beat === 0 && this.state.settings.accent;
         if (audible) {
-          this.tone(Math.max(when, now), countIn ? 800 : accent ? 1500 : 1000,
-            countIn ? 0.055 : 0.045, countIn ? 0.15 : accent ? 0.27 : 0.18);
+          const t = countIn ? TONES.countIn : accent ? TONES.accent : TONES.beat;
+          this.tone(Math.max(when, now), t.frequency, t.duration, t.level);
         }
         const timeout = setTimeout(() => {
           this.visuals.delete(timeout);
@@ -482,7 +484,8 @@ class Player extends EventTarget {
     if (this.audio.state !== "running") { this.lastFinished = this.state.session_id; return; }
     this.lastFinished = this.state.session_id;
     if (this.state.settings.muted) return;
-    this.tone(this.audio.currentTime + 0.01, 659.25, 0.20, 0.18, true);
-    this.tone(this.audio.currentTime + 0.23, 880, 0.36, 0.16, true);
+    // After the last beat has ended, so the chime never sums with a beat.
+    const at = Math.max(this.audio.currentTime, this.lastToneEnd || 0);
+    for (const t of TONES.chime) this.tone(at + t.start, t.frequency, t.duration, t.level, true);
   }
 }

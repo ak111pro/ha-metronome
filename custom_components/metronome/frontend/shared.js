@@ -65,6 +65,21 @@ export function dialFraction(x, y, inverted = false) {
  * navigator.vibrate), HA's own "haptic" event, which the frontend forwards to the app.
  * The app picks the strength for light/medium/heavy; there is no intensity control. */
 export const HAPTIC_TYPES = {20: "light", 40: "medium", 70: "heavy"};
+/* Every sound peaks at -1 dBFS (0.891) at volume 100 % (the master gain is the volume, 0
+ * when muted). A tone's peak is its envelope level times the master gain; tones never
+ * overlap (beats are >= 0.3 s apart at 200 BPM, the chime tones are sequential and wait for
+ * the last beat to end), so nothing sums above it. The accent differs by pitch only.
+ * start = offset after the finish (chime). checks/check_frontend.mjs asserts all of this. */
+export const PEAK = 0.891;
+export const TONES = {
+  beat: {frequency: 1000, duration: 0.045, level: PEAK},
+  accent: {frequency: 1500, duration: 0.045, level: PEAK},
+  countIn: {frequency: 800, duration: 0.055, level: PEAK},
+  chime: [{frequency: 659.25, duration: 0.20, level: PEAK, start: 0.01},
+    {frequency: 880, duration: 0.36, level: PEAK, start: 0.23}],
+};
+export const TONE_TAIL = 0.01;  // oscillator stops this long after the envelope ends
+export const masterGain = (volume, muted) => (muted ? 0 : volume);
 export function hapticMode(nav = globalThis.navigator, win = globalThis.window) {
   // iOS Companion app first: should WebKit ever expose navigator.vibrate it would not reach
   // the Taptic Engine; the app's own haptics (HA frontend "haptic" event) do.

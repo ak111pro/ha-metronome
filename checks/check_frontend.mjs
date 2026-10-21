@@ -1,7 +1,7 @@
 // Pure math/format checks. Does not exercise HA, a DOM or a real AudioContext.
 import assert from "node:assert/strict";
 import {readFileSync, readdirSync} from "node:fs";
-import {METERS, cleanConfig, validColor, tempo, dialFraction, point, remaining, timeText, escapeHTML, hapticMode, HAPTIC_TYPES, VERSION} from "../custom_components/metronome/frontend/shared.js";
+import {METERS, PEAK, TONES, TONE_TAIL, masterGain, cleanConfig, validColor, tempo, dialFraction, point, remaining, timeText, escapeHTML, hapticMode, HAPTIC_TYPES, VERSION} from "../custom_components/metronome/frontend/shared.js";
 assert.equal(METERS["6/8"],2);
 for (const [bpm,marking] of [[1,"Larghissimo"],[60,"Larghetto"],[120,"Allegro"],[200,"Prestissimo"]]) assert.equal(tempo(bpm),marking);
 for (const inverted of [false,true]) {
@@ -36,6 +36,20 @@ assert.deepEqual(cleanConfig({type: "t", entity: "e", name: "Practice ", timer_d
 const supports = (prop, v) => prop === "color" && /^(teal|#[0-9a-f]{3}|#[0-9a-f]{6}|rgb\(.*\)|hsl\(.*\)|var\(--.*\))$/i.test(v);
 for (const ok of ["teal", "#fff", "#16809e", "rgb(1, 2, 3)", "hsl(200 80% 40%)", "var(--red-color)", " teal "]) assert.ok(validColor(ok, supports), ok);
 for (const bad of ["", "  ", "notacolour", null, 42]) assert.ok(!validColor(bad, supports), String(bad));
+// Loudness: every sound peaks at -1 dBFS (0.891) at volume 100 % and is silent when muted;
+// tones never overlap (beats at 200 BPM, the two chime tones), so nothing sums above it.
+const dbfs = x => 20 * Math.log10(x);
+for (const [name, t] of [["beat", TONES.beat], ["accent", TONES.accent], ["countIn", TONES.countIn], ["chime 1", TONES.chime[0]], ["chime 2", TONES.chime[1]]]) {
+  const peak = t.level * masterGain(1, false);
+  assert.ok(Math.abs(peak - 0.891) <= 0.001, `${name} peak ${peak}`);
+  assert.ok(Math.abs(dbfs(peak) + 1) < 0.01, `${name} ${dbfs(peak)} dBFS`);
+  assert.equal(t.level * masterGain(1, true), 0);
+}
+assert.equal(PEAK, 0.891);
+assert.equal(masterGain(0.5, false), 0.5);
+for (const t of [TONES.beat, TONES.accent, TONES.countIn]) assert.ok(t.duration + TONE_TAIL < 60 / 200, "beats overlap at 200 BPM");
+assert.ok(TONES.chime[0].start + TONES.chime[0].duration + TONE_TAIL <= TONES.chime[1].start, "chime tones overlap");
+assert.notEqual(TONES.beat.frequency, TONES.accent.frequency);  // the accent differs by pitch
 // One version everywhere, and every relative module import is versioned (cache busting).
 const root = new URL("../custom_components/metronome/", import.meta.url);
 assert.equal(VERSION, JSON.parse(readFileSync(new URL("manifest.json", root))).version);
