@@ -1,5 +1,21 @@
 # Changelog
 
+## 0.1.0-alpha.8 (unreleased)
+
+From the alpha.7 iOS re-test (silent switch, volume and Tile play confirmed fixed).
+
+### Fixed
+
+- No sound after another app (e.g. YouTube) took the audio on iOS: a stuck AudioContext is
+  replaced by a fresh one inside the tap, the playback session re-applied.
+- Advanced → Diagnostics did not open on iOS; it is now always visible.
+
+### Changed
+
+- Test vibration cycles through the iOS app's haptic types; diagnostics show the type sent.
+- Idle timer arc uses the same muted colour as the idle BPM arc; the running countdown moves
+  smoothly (every frame; whole seconds with reduced motion).
+
 ## 0.1.0-alpha.7 (unreleased)
 
 From the first iPhone 14 / iPad Pro test (Companion app).

@@ -1,6 +1,6 @@
 # Home Assistant Metronome
 
-**0.1.0-alpha.7 · first iPhone/iPad fixes (silent switch, haptics path, diagnostics, volume slider); still for review and device testing**
+**0.1.0-alpha.8 · iOS audio recovery, visible diagnostics, smoother timer; still for review and device testing**
 
 A custom integration and dashboard card that play a metronome on the foreground phone or browser. Target environment: Home Assistant Core **2026.10.1**, Docker on a Raspberry Pi 4 (8 GB), with Android and iOS Companion apps.
 
@@ -23,7 +23,7 @@ This repository contains the integration, the card, installation examples, an HA
 3. Add a dashboard resource of type **JavaScript module** with this URL:
 
    ```text
-   /metronome/metronome-card.js?v=0.1.0-alpha.7
+   /metronome/metronome-card.js?v=0.1.0-alpha.8
    ```
 
    Dashboard resources may require Advanced Mode in the user profile. For YAML-managed resources, use `examples/resource.yaml` in the existing Lovelace resources configuration. Do not create a second conflicting Lovelace configuration.
@@ -141,7 +141,8 @@ Vibration is off by default and is a local, per-page setting (Advanced → Hapti
 - **iOS Companion app:** the card sends the app the same external-bus message HA's own frontend sends for its `haptic` event (`{type: "haptic", payload: {hapticType}}`, HA 2026.10 `attachExternalToApp`), directly on `hass.auth.external`. This is used whenever the iOS app's bus is present, even if WebKit exposes a `navigator.vibrate`. Short/Medium/Long map to the app's `light`/`medium`/`heavy` haptics; the app decides their strength.
 - **Other browsers without vibration** (e.g. Safari on iOS): the Haptics section is hidden.
 
-**Test vibration** (Advanced → Haptics) sends one pulse on its own. Haptics run on their own
+**Test vibration** (Advanced → Haptics) sends one pulse on its own, cycling through the iOS
+app's haptic types (light, medium, heavy, success, warning, failure, selection) on each press. Haptics run on their own
 clock: they continue when the system pauses the sound (see below).
 
 A phone in silent/mute/vibrate-off sound mode (for example Samsung's "Mute" mode) can suppress app vibration entirely; the card says so under Haptics. There is no intensity control.
@@ -160,9 +161,11 @@ unchanged. Leaving HA or another app taking the audio still stops the metronome.
 When the system pauses the sound while playing (WebKit's `interrupted` state: a call, Siri,
 another app; or `suspended`), the session keeps running: beat dots and haptics continue on a
 silent clock, the card says "No sound: …", and the next tap anywhere resumes the sound.
-`resume()` is never awaited for more than 1.5 s.
+`resume()` is never awaited for more than 1.5 s. If another app left the context "interrupted" or dead (seen after
+YouTube on an iPhone), the next tap or Start replaces it with a fresh AudioContext and
+re-applies the playback session; Diagnostics count the contexts and record the replacement.
 
-**Advanced → Diagnostics** (collapsed) shows the AudioContext state and sample rate, the audio
+**Advanced → Diagnostics** (always visible) shows the AudioContext state and sample rate, the audio
 session type, whether this page is the output, the haptics path, the app type, the last
 haptic and the last audio error. A page that takes output also writes this once to the HA log
 (`custom_components.metronome`, info level) with the HA user name, nothing else personal.
