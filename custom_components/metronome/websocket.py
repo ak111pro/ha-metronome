@@ -123,6 +123,7 @@ DIAGNOSTIC_KEYS = (
     "vibration_on",
     "last_haptic",
     "last_error",
+    "contexts",
     "app",
     "external_bus",
     "vibrate_api",

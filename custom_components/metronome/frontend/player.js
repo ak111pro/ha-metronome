@@ -15,11 +15,33 @@ globalThis[REGISTRY] ||= new WeakMap();
 const SHARED = Symbol.for("metronome.audio.v1");
 const shared = globalThis[SHARED] ||= {ctx: null, gestureAt: -Infinity, armAt: -Infinity, timer: null, players: new Set(), installed: false};
 export const GESTURE_MS = 5000;
+shared.contexts ||= 0;
 export function audioContext() {
   const Audio = window.AudioContext || window.webkitAudioContext;
   if (!Audio) return null;
-  if (!shared.ctx || shared.ctx.state === "closed") shared.ctx = new Audio({latencyHint: "interactive"});
+  if (!shared.ctx || shared.ctx.state === "closed") {
+    shared.ctx = new Audio({latencyHint: "interactive"});
+    shared.contexts++;
+  }
   return shared.ctx;
+}
+/* Inside a tap: a context that another app's audio left "interrupted" (or closed) does not
+ * come back with resume() on iOS (seen after YouTube took the audio session: Start stopped
+ * YouTube but stayed silent until YouTube was killed). Replace it with a fresh context in the
+ * same gesture and re-apply the playback session. A merely suspended context (our own
+ * battery suspend) is resumed as before. Players rebind their gain to the new context. */
+export function freshAudioInGesture(reason) {
+  const old = shared.ctx;
+  if (old && !["interrupted", "closed"].includes(old.state)) return audioContext();
+  if (old) {
+    noteError(`context ${old.state} after ${reason}: replaced`);
+    try { old.close().catch(() => {}); } catch (_) { /* already closed */ }
+    shared.ctx = null;
+  }
+  playbackSession(false);
+  const ctx = audioContext();
+  for (const player of shared.players) if (player.audio && player.audio !== ctx) player.attachAudio();
+  return ctx;
 }
 export const recentGesture = () => performance.now() - shared.gestureAt < GESTURE_MS;
 // resume() can hang on WebKit (e.g. while a call holds the audio session): never wait forever.
@@ -73,8 +95,12 @@ function onGesture(event) {
   const hass = document.querySelector("home-assistant")?.hass;
   if (!standby(hass).length) return;
   shared.gestureAt = performance.now();
-  const ctx = audioContext();
-  if (ctx && ctx.state !== "running") ctx.resume().catch(() => {});
+  const ctx = freshAudioInGesture("a tap");
+  if (ctx && ctx.state !== "running") {
+    // The output page re-applies "playback" in the tap (a new context needs it again).
+    if ([...shared.players].some(p => p.readyForAudio)) playbackSession(true);
+    ctx.resume().catch(() => {});
+  }
   scheduleSuspend();
   // One arm per tap (pointerup, touchend and click all fire); it precedes the service call.
   if (shared.gestureAt - shared.armAt > 250) {
@@ -229,9 +255,21 @@ class Player extends EventTarget {
    * inside the tap (user gesture), which is what lets the browser enable audio. */
   async claim() {
     // resume() is invoked directly during the click gesture, before network waits.
+    freshAudioInGesture("Start");
     if (!this.attachAudio()) throw new Error("Audio is unavailable in this browser");
     playbackSession(true);
     await withTimeout(this.audio.resume(), 1500);
+    // Still not running after the timeout (a dead context that kept reporting "suspended"):
+    // one fresh context, still close enough to the tap for WebKit's user activation.
+    if (this.audio.state !== "running") {
+      noteError(`context ${this.audio.state} after resume at Start: replaced`);
+      const old = shared.ctx; shared.ctx = null;
+      try { old?.close().catch(() => {}); } catch (_) { /* closed */ }
+      playbackSession(false);
+      this.attachAudio();
+      playbackSession(true);
+      await withTimeout(this.audio.resume(), 1500);
+    }
     await this.ready;
     this.readyForAudio = true;
     this.armed = true;
@@ -265,7 +303,7 @@ class Player extends EventTarget {
   diagnostics() {
     const ctx = shared.ctx;
     return {
-      audio: ctx ? ctx.state : "none", sample_rate: ctx ? ctx.sampleRate : null,
+      audio: ctx ? ctx.state : "none", sample_rate: ctx ? ctx.sampleRate : null, contexts: shared.contexts,
       audio_session: audioSessionType() || (IOS ? "n/a (silent-audio fallback)" : "n/a"),
       owner: !!this.state?.is_owner, ready: this.readyForAudio,
       haptics: hapticMode() || "none", vibration_on: this.vibration,
@@ -413,7 +451,15 @@ class Player extends EventTarget {
     tick();
   }
 
-  buzz() {
+  // Test vibration: one pulse, cycling through every type the iOS app accepts, so a test
+  // shows whether any of them reaches the Taptic Engine (Android: the pulse length).
+  testHaptic() {
+    const types = ["light", "medium", "heavy", "success", "warning", "failure", "selection"];
+    this.testIndex = ((this.testIndex ?? -1) + 1) % types.length;
+    this.buzz(types[this.testIndex]);
+  }
+
+  buzz(type) {
     const mode = hapticMode();
     this.lastHaptic = `${new Date().toLocaleTimeString()} ${mode || "none"} ${this.pulse} ms`;
     if (mode === "vibrate") navigator.vibrate(this.pulse);
@@ -422,7 +468,8 @@ class Player extends EventTarget {
       // app (attachExternalToApp): external bus message {type: "haptic", payload:
       // {hapticType}}. Sent directly on hass.auth.external when it exists (inside the app),
       // otherwise through the window event HA forwards.
-      const hapticType = HAPTIC_TYPES[this.pulse] || "light";
+      const hapticType = type || HAPTIC_TYPES[this.pulse] || "light";
+      this.lastHaptic += ` type ${hapticType}`;
       const external = document.querySelector("home-assistant")?.hass?.auth?.external;
       if (external?.fireMessage) external.fireMessage({type: "haptic", payload: {hapticType}});
       else window.dispatchEvent(new CustomEvent("haptic", {detail: hapticType}));

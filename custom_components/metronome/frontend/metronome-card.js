@@ -82,6 +82,7 @@ export class MetronomeCard extends HTMLElement {
   }
   disconnectedCallback() {
     clearInterval(this.tick);
+    cancelAnimationFrame(this.countdownRaf); this.countdownRaf = null;
     clearTimeout(this.patchTimeout);
     this.flushPatch();
     this.unlisten();
@@ -132,7 +133,7 @@ export class MetronomeCard extends HTMLElement {
           <div class="settings-label">Sound</div><div class="volume-label"><span id="volume-label">Volume</span><output></output></div><div class="volume-wrap" role="slider" tabindex="0" aria-labelledby="volume-label" aria-valuemin="0" aria-valuemax="100"><div class="volume-fill" aria-hidden="true"><span class="volume-marker"></span></div></div>${tile("muted","Mute","volume-off")}
           <div class="settings-label">Output</div><div class="output"><div class="output-status" role="status">${icon("volume-high")}<span class="output-device"></span></div><button type="button" class="tile output-claim" data-action="claim">${icon("cellphone-arrow-down")}<span>Play on this device</span></button><div class="note output-note"></div></div>
           <div class="haptics"><div class="settings-label">Haptics</div><div class="grid">${tile("vibration","Vibration","vibrate")}${picker("pulse")}</div><div class="note haptics-note"></div><button type="button" class="tile haptic-test" data-action="test-haptic">${icon("vibrate")}<span>Test vibration</span></button></div>
-          <details class="diagnostics"><summary>Diagnostics</summary><dl class="diag"></dl></details>
+          <div class="diagnostics"><div class="settings-label">Diagnostics</div><dl class="diag"></dl></div>
         </div>
       </section><div class="message" role="status" hidden></div>
       </ha-card>`;
@@ -220,7 +221,7 @@ export class MetronomeCard extends HTMLElement {
     if (!state) return;
     if (action === "start") return this.run(() => this.player.start());
     if (action === "claim") return this.run(() => this.player.claim());
-    if (action === "test-haptic") { this.player.buzz(); this.updateDiagnostics(true); return; }
+    if (action === "test-haptic") { this.player.testHaptic(); this.updateDiagnostics(true); return; }
     if (action === "stop" || action === "pause") return this.run(() => this.player.action(action));
     if (action === "timer") return this.patch({timer_enabled: !state.settings.timer_enabled});
     if (action === "minus" || action === "plus") return this.patch({bpm: clamp(state.settings.bpm + (action === "plus" ? 1 : -1),1,200)});
@@ -371,13 +372,17 @@ export class MetronomeCard extends HTMLElement {
     });
   }
   // Advanced → Diagnostics (collapsed): what the next phone test needs to see.
+  // Always visible (a <details> with a flex <summary> did not open on iOS WebKit); refreshed
+  // about once a second while Advanced is shown.
   updateDiagnostics(force = false) {
-    const box = this.$(".diagnostics");
-    if (!box || (!box.open && !force) || !this.player) return;
+    if (!this.$(".diagnostics") || !this.player) return;
+    const t = performance.now();
+    if (!force && t - (this.diagAt || 0) < 900) return;
+    this.diagAt = t;
     const d = this.player.diagnostics();
     const rows = [["Audio", `${d.audio}${d.sample_rate ? ` · ${d.sample_rate} Hz` : ""}`], ["Audio session", d.audio_session],
       ["This page is the output", d.owner ? "yes" : "no"], ["Haptics path", `${d.haptics}${d.vibration_on ? " · on" : " · off"}`],
-      ["App", `${d.app}${d.external_bus ? " · HA external bus" : ""}${d.vibrate_api ? " · navigator.vibrate" : ""}`], ["Last haptic", d.last_haptic || "–"], ["Last audio error", d.last_error || "–"]];
+      ["App", `${d.app}${d.external_bus ? " · HA external bus" : ""}${d.vibrate_api ? " · navigator.vibrate" : ""}`], ["Last haptic", d.last_haptic || "–"], ["Audio contexts", String(d.contexts)], ["Last audio event", d.last_error || "–"]];
     const html = rows.map(([k, v]) => `<dt>${esc(k)}</dt><dd>${esc(v)}</dd>`).join("");
     if (this.$(".diag").innerHTML !== html) this.$(".diag").innerHTML = html;
   }
@@ -553,7 +558,14 @@ export class MetronomeCard extends HTMLElement {
     const duration = !locked && this.dragDuration != null ? this.dragDuration : s.duration;
     const dial = this.$(".timer-dial"), outside = !locked && (duration < 5 || duration > 120);
     dial.classList.toggle("outside",outside); dial.classList.toggle("locked",locked);
-    if (!dial.classList.contains("dragging")) this.draw(dial,locked ? rem/s.duration : finished ? 0 : (duration-5)/115,true);
+    // Running countdown: drawn every animation frame (smooth, see countdownFrame); 1 s steps
+    // with reduced motion; the clock tick draws everything else.
+    const animate = locked && state.state === "playing" && !this.motion.matches;
+    if (animate && !this.countdownRaf) this.countdownRaf = requestAnimationFrame(() => this.countdownFrame());
+    if (!dial.classList.contains("dragging") && !animate) {
+      const shown = locked && this.motion.matches ? Math.ceil(rem) : rem;
+      this.draw(dial,locked ? shown/s.duration : finished ? 0 : (duration-5)/115,true);
+    }
     const range = this.$(".timer-range");
     range.disabled = locked || outside; range.hidden = locked; range.value = clamp(duration,5,120);
     const progress = this.$(".progress");
@@ -575,6 +587,17 @@ export class MetronomeCard extends HTMLElement {
     });
     this.$(".timer-label").textContent = locked ? "Remaining" : "Timer";
     this.$(".timer-hint").textContent = countIn ? "Starts after count-in" : state.state === "paused" ? "Paused · time saved" : state.state === "playing" ? this.finishLabel() : finished ? "Timer finished" : outside ? "Dial: 5 s – 2 min" : `${["Hours","Minutes","Seconds"][this.selectedField]} selected`;
+  }
+
+  countdownFrame() {
+    this.countdownRaf = null;
+    const state = this.player?.state;
+    if (!state || !this.isConnected || state.state !== "playing" || this.motion.matches || this.config.layout === "compact") return;
+    const dial = this.$(".timer-dial");
+    if (!dial || !this.$(".timer-panel.open")) return;
+    this.draw(dial, remaining(state, this.player.now()) / state.settings.duration, true);
+    // requestAnimationFrame does not run while the page is hidden: no load in the background.
+    this.countdownRaf = requestAnimationFrame(() => this.countdownFrame());
   }
 
   pulse(beat, countIn = false) {

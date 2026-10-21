@@ -356,6 +356,7 @@ async def test_diagnostics_report_is_logged(
             "sample_rate": 48000,
             "audio_session": "playback",
             "haptics": "companion",
+            "contexts": 2,
             "last_error": "x" * 500,
             "secret": "not logged",
         },
@@ -364,7 +365,7 @@ async def test_diagnostics_report_is_logged(
     line = next(r.getMessage() for r in caplog.records if "reports" in r.getMessage())
     assert "Metronome: output page of" in line
     assert "audio=interrupted" in line and "audio_session=playback" in line
-    assert "haptics=companion" in line and "sample_rate=48000" in line
+    assert "haptics=companion" in line and "sample_rate=48000" in line and "contexts=2" in line
     assert "x" * 121 not in line and "secret" not in line
     bad = await ws.send(type="metronome/diagnostics", entity_id=PLAYER, diagnostics="nope")
     assert not bad["success"]

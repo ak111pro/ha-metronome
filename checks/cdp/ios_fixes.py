@@ -199,7 +199,7 @@ async def main():
         )
         # Diagnostics while playing.
         await cdp.js(
-            f"{R}.querySelector('[data-action=advanced]').click(); {R}.querySelector('.diagnostics').open = true; 1",
+            f"{R}.querySelector('[data-action=advanced]').click(); 1",
             gesture=True,
         )
         await cdp.idle(0.8)
@@ -213,7 +213,7 @@ async def main():
             "Audio: running" in text
             and "This page is the output: yes" in text
             and "Haptics path: vibrate · on" in text
-            and "Last audio error:" in text,
+            and "Last audio event:" in text,
             text,
         )
         await cdp.js(f"{R}.querySelector('[data-action=test-haptic]').click(); 1", gesture=True)
