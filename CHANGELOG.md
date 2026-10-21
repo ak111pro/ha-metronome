@@ -9,7 +9,6 @@
 
 - Compact card: no tap-highlight flash over the whole card when a button (e.g. −/+) is tapped
   on Android.
-
 - Expanded dialog: the close button sits at the top left like HA's more-info dialog, with
   the title next to it, and its focus ring stays inside the dialog. In the Advanced view Back
   takes that corner (Escape or a tap outside still close the dialog).
