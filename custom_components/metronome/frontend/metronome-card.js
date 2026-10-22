@@ -1,7 +1,7 @@
-import {getPlayer} from "./player.js?v=0.1.0-beta.8";
-import {styles} from "./styles.js?v=0.1.0-beta.8";
+import {getPlayer} from "./player.js?v=0.1.0-beta.9";
+import {styles} from "./styles.js?v=0.1.0-beta.9";
 import {DEFAULT_CONFIG, COLOR_KEYS, METERS, escapeHTML as esc, clamp, tempo, remaining, splitTime,
-  timeText, arc, point, dialFraction, beatPosition, hapticMode, validColor} from "./shared.js?v=0.1.0-beta.8";
+  timeText, arc, point, dialFraction, beatPosition, hapticMode, validColor} from "./shared.js?v=0.1.0-beta.9";
 
 const icon = name => `<ha-icon icon="mdi:${name}" aria-hidden="true"></ha-icon>`;
 const button = (action, label, glyph, cls = "control") =>
@@ -25,7 +25,7 @@ const transport = (advanced = false) => `<div class="transport" role="group" ari
 
 export class MetronomeCard extends HTMLElement {
   static async getConfigElement() {
-    await import("./editor.js?v=0.1.0-beta.8");
+    await import("./editor.js?v=0.1.0-beta.9");
     return document.createElement("metronome-card-editor");
   }
   static getStubConfig(hass) {
@@ -454,8 +454,20 @@ export class MetronomeCard extends HTMLElement {
     if (!this.config || !this.$("ha-card")) return;
     const state = this.player?.state;
     const message = this.$(".message");
-    const error = this.localError || this.player?.error || (!state ? "Connecting to metronome…" : "");
-    message.textContent = error; message.hidden = !error;
+    // Red: errors from the user's own action (localError) and setup errors ("action").
+    // Transient connection/playback notices are red only with Show diagnostics; otherwise a
+    // quiet secondary line while it matters ("Reconnecting…", "No sound – tap to resume").
+    const notice = !this.localError && this.player?.error && this.player.errorKind === "notice";
+    const quiet = (notice || !state) && !this.player?.showDiagnostics;
+    let text = this.localError || this.player?.error || (!state ? "Connecting to metronome…" : "");
+    if (quiet) {
+      text = !state ? "Connecting…"
+        : this.player.connection?.connected === false ? "Reconnecting…"
+        : this.player.error.startsWith("No sound") && state.is_owner ? "No sound – tap to resume"
+        : "";
+    }
+    message.textContent = text; message.hidden = !text;
+    message.classList.toggle("quiet", quiet);
     if (!state) { this.all("button,input").forEach(el => { el.disabled = true; }); return; }
     const s = state.settings, active = state.state === "playing", locked = state.state !== "idle";
     const card = this.$("ha-card");

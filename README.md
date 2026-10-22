@@ -6,7 +6,7 @@
 [![Release](https://img.shields.io/github/v/release/ak111pro/ha-metronome?include_prereleases)](https://github.com/ak111pro/ha-metronome/releases)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://github.com/ak111pro/ha-metronome/blob/main/LICENSE)
 
-**0.1.0-beta.8 · beta, experimental · AI-assisted (built with Codex and Claude) · MIT licence**
+**0.1.0-beta.9 · beta, experimental · AI-assisted (built with Codex and Claude) · MIT licence**
 
 A custom integration and dashboard card that play a metronome on the phone or browser you are
 holding. Home Assistant keeps the shared settings and session; the clicks are synthesized on
@@ -76,7 +76,7 @@ add the resource and logs the URL instead. Add it yourself as a JavaScript modul
 ```yaml
 lovelace:
   resources:
-    - url: /metronome/metronome-card.js?v=0.1.0-beta.8
+    - url: /metronome/metronome-card.js?v=0.1.0-beta.9
       type: module
 ```
 
@@ -153,7 +153,7 @@ Pause is available only when the timer is enabled. It preserves the remaining ti
 | `show_signature` | `true` | Show the meter below BPM |
 | `show_timer` | `true` | Show timer controls and countdown |
 | `show_advanced` | `true` | Show the Advanced button (fifth button of the transport row) |
-| `show_step_buttons` | `true` | Show the −1/+1 buttons (BPM and timer dials, compact tempo row). `false` hides them; tempo then changes by dragging the handle, typing or Tap, the timer by its fields; the compact card keeps the BPM number |
+| `show_step_buttons` | `true` | Show the −1/+1 buttons (BPM and timer dials, compact tempo row). `false` hides them; tempo then changes by dragging the handle, typing or Tap, the timer by its fields. On the compact card the BPM number moves to the right end of the header row and the name/state line gets the freed width (no separate tempo row) |
 | `show_timer_bar` | `true` | Compact card: a slim countdown bar with the full card's arc thickness and round caps (24 px, the arc's 24/320 at a 320 px dial; fill in the arc colours over a tinted track, smooth movement) with the remaining time and "Ends …" inside it in the same 13 px text (only the remaining time, centred, if both do not fit); `false` shows the one-line text instead. Only while the timer is on and `show_timer` is true |
 | `feedback` | `dots_glow` | `dots`, `dots_glow`, `off`. Compact card: the BPM number pulses (`dots`) and glows (`dots_glow`) on each beat |
 | `features_position` | `bottom` | Compact card: `bottom` (tempo row below the name) or `inline` (beside the name, like the Tile card's features position; falls back to bottom on cards of 340 px and narrower) |
@@ -167,6 +167,13 @@ Pause is available only when the timer is enabled. It preserves the remaining ti
 pulses gently on each beat in the primary colour (stronger on the accented first beat; the
 secondary colour during count-in); with reduced motion it only changes colour/glow. The full
 card keeps a stable number and its 48 px controls.
+
+**Messages.** Red messages are for things you have to act on: a failed action (for example
+"Another device is playing…", "No device is ready to play…", "Audio is unavailable in this
+browser") or a setup problem (wrong entity, no permission, instance unavailable). Transient
+connection and playback notices ("Connection lost…", an expired subscription, "No sound: …")
+appear in red only with Advanced → Show diagnostics; otherwise the card shows a quiet line
+while it matters ("Connecting…", "Reconnecting…", "No sound – tap to resume") or nothing.
 
 Visibility settings hide controls; they do not change the shared session. A hidden timer can still be enabled by another card or automation. Tempo, duration, count-in, meter, accent, volume and mute belong to the integration instance, not the card configuration. Vibration preferences are local to the current page and reset on reload.
 
@@ -233,7 +240,8 @@ unchanged. Leaving HA or another app taking the audio still stops the metronome.
 
 When the system pauses the sound while playing (WebKit's `interrupted` state: a call, Siri,
 another app; or `suspended`), the session keeps running: beat dots and haptics continue on a
-silent clock, the card says "No sound: …", and the next tap anywhere resumes the sound.
+silent clock, the card shows a quiet "No sound – tap to resume" (with Show diagnostics: the
+full red explanation), and the next tap anywhere resumes the sound.
 `resume()` is never awaited for more than 1.5 s. If another app left the context "interrupted" or dead (seen after
 YouTube on an iPhone), the next tap or Start replaces it with a fresh AudioContext and
 re-applies the playback session; Diagnostics count the contexts and record the replacement.

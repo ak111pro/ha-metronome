@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.1.0-beta.9 (unreleased)
+
+### Changed
+
+- Compact card with `show_step_buttons: false`: the BPM number sits at the right end of the
+  header row (inline and bottom), the name and state line use the freed width, and the
+  separate tempo row is gone.
+- The red "Connection lost…" and other transient connection/playback notices only appear with
+  Advanced → Show diagnostics; otherwise a quiet line ("Reconnecting…", "No sound – tap to
+  resume") or nothing. Errors you must act on stay red.
+
 ## 0.1.0-beta.8 (2026-10-21)
 
 0.1.0-beta.3 to 0.1.0-beta.7 were never released; their changes are part of this version

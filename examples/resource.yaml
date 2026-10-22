@@ -1,3 +1,3 @@
 # Add to the resources list of an existing YAML-managed Lovelace configuration.
-- url: /metronome/metronome-card.js?v=0.1.0-beta.8
+- url: /metronome/metronome-card.js?v=0.1.0-beta.9
   type: module

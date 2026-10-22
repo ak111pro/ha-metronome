@@ -1,7 +1,7 @@
 /* A single engine per HA connection/entity, independent of card attachment.
  * No audio is generated on the HA host. WS sends session changes, never beats.
  */
-import {METERS, HAPTIC_TYPES, TONES, TONE_TAIL, masterGain, beatPosition, hapticMode} from "./shared.js?v=0.1.0-beta.8";
+import {METERS, HAPTIC_TYPES, TONES, TONE_TAIL, masterGain, beatPosition, hapticMode} from "./shared.js?v=0.1.0-beta.9";
 
 const REGISTRY = Symbol.for("metronome.players.v1");
 globalThis[REGISTRY] ||= new WeakMap();
@@ -154,7 +154,7 @@ class Player extends EventTarget {
     this.ready.catch(() => {});
     this.heartbeat = setInterval(() => {
       if (this.subscription != null && this.readyForAudio && !document.hidden) {
-        this.send("heartbeat").catch(error => this.interrupt(error));
+        this.send("heartbeat").catch(error => this.interrupt(error, "notice"));
       }
     }, 3000);
     document.addEventListener("visibilitychange", () => {
@@ -162,13 +162,23 @@ class Player extends EventTarget {
       else this.rearm();
     });
     window.addEventListener("pagehide", () => this.interrupt());
-    connection.addEventListener("disconnected", () => this.interrupt("Connection lost. Tap Start to reconnect audio."));
+    connection.addEventListener("disconnected", () => this.interrupt("Connection lost. Tap Start to reconnect audio.", "notice"));
+    // Back online: a connection notice is history (it stays in the diagnostics).
+    connection.addEventListener("ready", () => {
+      if (this.errorKind === "notice" && !this.error.startsWith("No sound")) { this.error = ""; this.emit("change", this.state); }
+    });
   }
 
   now() { return performance.now() / 1000 + this.serverOffset; }
   emit(type, detail) { this.dispatchEvent(new CustomEvent(type, {detail})); }
-  fail(error) {
+  /* kind "action": something the user must do (setup/permission errors) - always shown.
+   * kind "notice": transient connection/playback notices - shown in red only with Show
+   * diagnostics; otherwise the card shows a quiet line or nothing. Every message also goes
+   * to the diagnostics' last audio event. */
+  fail(error, kind = "action") {
     this.error = typeof error === "string" ? error : error?.message || "Metronome connection failed";
+    this.errorKind = kind;
+    noteError(this.error);
     this.emit("change", this.state);
   }
 
@@ -298,6 +308,7 @@ class Player extends EventTarget {
     }
     noteError(`AudioContext ${this.audio.state}`);
     this.error = `No sound: the system paused audio on this device (${this.audio.state}). Beat dots and haptics continue; tap anywhere to resume sound.`;
+    this.errorKind = "notice";
     this.emit("change", this.state);
   }
 
@@ -375,13 +386,13 @@ class Player extends EventTarget {
     if (this.vibration && hapticMode() === "vibrate") navigator.vibrate(0);
   }
 
-  interrupt(error) {
+  interrupt(error, kind = "notice") {
     this.silence();
     const wasReady = this.readyForAudio;
     this.readyForAudio = false;
     if (wasReady) { scheduleSuspend(); playbackSession(false); }
     if (wasReady) this.send("release").catch(() => {});
-    if (error) this.fail(error);
+    if (error) this.fail(error, kind);
   }
 
   tone(when, frequency, duration, level, chime = false) {
