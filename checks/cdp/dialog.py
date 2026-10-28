@@ -107,12 +107,13 @@ async def main():
                 await cdp.js(f"{DIALOG}.scrollTop = 1e6; 1")
                 await cdp.idle(0.5)
                 m2 = await cdp.js(MEASURE)
-                # Either everything fits, or a swipe that starts on the arc scrolls the dialog.
+                # Either everything fits, or a swipe that starts on the arc scrolls the dialog
+                # (100 px, or to the end when there is less to scroll).
                 check(
                     f"{tag} timer reachable",
                     m["timerOpen"]
                     and m2["timerBottomVisible"]
-                    and (not m["scrollable"] or swiped > 100),
+                    and (not m["scrollable"] or swiped >= min(100, m2["scrollTop"] - 1)),
                     f"fits: {not m['scrollable']}, swipe on arc scrolled {swiped} px, timer end visible {m2['timerBottomVisible']}",
                 )
                 if out:

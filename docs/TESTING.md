@@ -1,5 +1,15 @@
 # Validation record and next-stage test plan
 
+## Browser suite on beta.9 (2026-10-28, ha-dev on the current stable HA image)
+
+All 19 scripts in `checks/cdp` pass in headless Chromium 155 at phone widths, including the new
+`beta_items.py` for the beta.3–beta.9 changes that had only been checked on the owner's phone
+(compact timer bar, tap highlight, BPM in the header without -1/+1, quiet connection notices,
+close button at the top left). Found and fixed on the way: the expanded dialog opened 8 px
+scrolled on a 360×640 phone with the timer open. Harness fixes: HA's service worker reloaded
+the test page ~40 s after the first load in a fresh profile (now disabled in the checks);
+`haptics.py` and `dialog.py` expectations updated to the intended beta.3 behaviour.
+
 ## Status (2026-10-21, 0.1.0-beta.1)
 
 | Area | Status |

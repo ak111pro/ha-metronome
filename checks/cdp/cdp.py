@@ -114,6 +114,12 @@ async def open_page(session, width=360, height=800, new=False):
     # Always fetch the card modules from the server, never from HA's service worker.
     await cdp.call("Network.setCacheDisabled", cacheDisabled=True)
     await cdp.call("Network.setBypassServiceWorker", bypass=True)
+    # No service worker at all: in a fresh profile HA's worker takes control ~40 s after the
+    # first load and HA reloads the page on "controllerchange", which wipes every check's state.
+    await cdp.call(
+        "Page.addScriptToEvaluateOnNewDocument",
+        source="delete Navigator.prototype.serviceWorker;",
+    )
     await cdp.call(
         "Emulation.setDeviceMetricsOverride",
         width=width,

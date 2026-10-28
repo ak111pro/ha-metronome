@@ -63,6 +63,7 @@ async def main():
             "reduced motion: whole-second steps", steps <= 2, f"{steps} different arcs in 30 frames"
         )
         await cdp.call("Emulation.setEmulatedMedia", features=[])
+        await cdp.idle(0.5)  # the 100 ms clock tick restarts the frame loop
         raf = await cdp.js(f"!!{CARD}.countdownRaf")
         await service(session, "media_player", "media_stop", {"entity_id": ENTITY})
         await asyncio.sleep(0.5)

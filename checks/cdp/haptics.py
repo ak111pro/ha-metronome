@@ -78,7 +78,11 @@ async def main():
             len(bus),
         )
         assert not vib and not hap and len(bus) >= 3
-        assert all(m == {"type": "haptic", "payload": {"hapticType": "heavy"}} for m in bus)
+        # Beats send the pulse's type (heavy here); the test button cycles through the iOS
+        # types and starts with "light".
+        assert all(m["type"] == "haptic" for m in bus)
+        types = [m["payload"]["hapticType"] for m in bus]
+        assert types.count("light") == 1 and set(types) == {"heavy", "light"}, types
         await cdp.js("delete document.querySelector('home-assistant').hass.auth.external; 1")
         await cdp.js(
             "Object.defineProperty(navigator, 'vibrate', {value: undefined, configurable: true}); 1"
