@@ -1,6 +1,9 @@
 # Changelog
 
-## Unreleased
+## 0.1.0 (2026-10-28)
+
+First stable release: beta.9 plus the fix below. The whole card was checked again in a
+browser at phone sizes (see TESTING.md).
 
 ### Fixed
 

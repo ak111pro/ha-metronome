@@ -6,7 +6,7 @@
 [![Release](https://img.shields.io/github/v/release/ak111pro/ha-metronome?include_prereleases)](https://github.com/ak111pro/ha-metronome/releases)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://github.com/ak111pro/ha-metronome/blob/main/LICENSE)
 
-**0.1.0-beta.9 · beta, experimental · AI-assisted (built with Codex and Claude) · MIT licence**
+**0.1.0 · AI-assisted (built with Codex and Claude) · MIT licence**
 
 A custom integration and dashboard card that play a metronome on the phone or browser you are
 holding. Home Assistant keeps the shared settings and session; the clicks are synthesized on
@@ -16,10 +16,10 @@ the foreground device (Web Audio), not on the server.
 
 **Requirements:** Home Assistant **2026.10.1** or newer.
 
-**Tested on** Home Assistant 2026.10.1 (test suite) and 2026.10.2 (live), with the Companion
+**Tested on** Home Assistant 2026.10.1 (test suite) and 2026.10.2 and later (live), with the Companion
 app on an Android phone (Samsung Galaxy S21 Ultra), an iPhone 14 (iOS 27.0.1) and an iPad Pro
-(iPadOS 26.7.1), plus desktop Chromium. Details in [TESTING.md](https://github.com/ak111pro/ha-metronome/blob/main/docs/TESTING.md). This is a
-beta: expect rough edges, and please report issues.
+(iPadOS 26.7.1), plus desktop Chromium. Details in [TESTING.md](https://github.com/ak111pro/ha-metronome/blob/main/docs/TESTING.md). Please
+report issues on GitHub.
 
 ## Screenshots
 
@@ -76,7 +76,7 @@ add the resource and logs the URL instead. Add it yourself as a JavaScript modul
 ```yaml
 lovelace:
   resources:
-    - url: /metronome/metronome-card.js?v=0.1.0-beta.9
+    - url: /metronome/metronome-card.js?v=0.1.0
       type: module
 ```
 
