@@ -30,8 +30,8 @@ beta: expect rough edges, and please report issues.
     <td align="center"><img src="https://raw.githubusercontent.com/ak111pro/ha-metronome/main/docs/images/advanced-dark.png" width="260" alt="Advanced view: rhythm, sound, output, haptics and diagnostics settings"><br><sub>Advanced settings</sub></td>
   </tr>
   <tr>
-    <td align="center"><img src="https://raw.githubusercontent.com/ak111pro/ha-metronome/main/docs/images/compact-tile-light.png" width="260" alt="Compact cards (bottom and inline) next to native HA Tile cards, light theme"><br><sub>Compact (bottom / inline) next to native Tiles</sub></td>
-    <td align="center"><img src="https://raw.githubusercontent.com/ak111pro/ha-metronome/main/docs/images/compact-tile-dark.png" width="260" alt="Compact cards next to native Tile cards, dark theme"><br><sub>Compact · dark</sub></td>
+    <td align="center"><img src="https://raw.githubusercontent.com/ak111pro/ha-metronome/main/docs/images/compact-tile-light.png" width="260" alt="Compact cards (bottom and inline) with the timer bar, next to native HA Tile cards, light theme"><br><sub>Compact (bottom / inline) next to native Tiles</sub></td>
+    <td align="center"><img src="https://raw.githubusercontent.com/ak111pro/ha-metronome/main/docs/images/compact-tile-dark.png" width="260" alt="Compact cards with the timer bar next to native Tile cards, dark theme"><br><sub>Compact · dark</sub></td>
     <td align="center"><img src="https://raw.githubusercontent.com/ak111pro/ha-metronome/main/docs/images/full-idle-dark.png" width="260" alt="Full card, idle, dark theme"><br><sub>Full card · idle · dark</sub></td>
   </tr>
 </table>
