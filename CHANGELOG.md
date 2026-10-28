@@ -1,5 +1,13 @@
 # Changelog
 
+## Unreleased
+
+### Fixed
+
+- Expanded dialog on a short phone with the timer open: it no longer opens scrolled down by
+  8 px with the title cut at the top (opening focuses the close button, which scrolled it into
+  view).
+
 ## 0.1.0-beta.9 (2026-10-22)
 
 ### Changed

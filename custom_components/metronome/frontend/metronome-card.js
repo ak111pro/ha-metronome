@@ -735,6 +735,9 @@ export class MetronomeCard extends HTMLElement {
       dialog.addEventListener("close",() => { dialog.remove(); this.$('[data-action="expand"]')?.focus(); });
     }
     dialog.showModal();
+    // showModal focuses the X and scrolls it into view: on a short phone with the timer open
+    // that leaves the dialog 8 px down and cuts the title. Start at the top instead.
+    dialog.scrollTop = 0;
   }
 }
 
