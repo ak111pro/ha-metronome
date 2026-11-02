@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.1.1 (2026-11-02)
+
+Metronome is now in the HACS default list. The README's install section leads with searching for
+**Metronome** in HACS; adding the custom repository stays as a fallback. No code changes.
+
 ## 0.1.0 (2026-10-28)
 
 First stable release: beta.9 plus the fix below. The whole card was checked again in a
