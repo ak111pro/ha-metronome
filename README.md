@@ -2,7 +2,7 @@
 
 [![Validate](https://github.com/ak111pro/ha-metronome/actions/workflows/validate.yml/badge.svg)](https://github.com/ak111pro/ha-metronome/actions/workflows/validate.yml)
 [![Tests](https://github.com/ak111pro/ha-metronome/actions/workflows/tests.yml/badge.svg)](https://github.com/ak111pro/ha-metronome/actions/workflows/tests.yml)
-[![HACS Custom](https://img.shields.io/badge/HACS-Custom-orange.svg)](https://hacs.xyz)
+[![HACS Default](https://img.shields.io/badge/HACS-Default-41BDF5.svg)](https://hacs.xyz)
 [![Release](https://img.shields.io/github/v/release/ak111pro/ha-metronome?include_prereleases)](https://github.com/ak111pro/ha-metronome/releases)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://github.com/ak111pro/ha-metronome/blob/main/LICENSE)
 
@@ -48,17 +48,19 @@ report issues on GitHub.
 
 ## Install
 
-### HACS (custom repository)
+### HACS
 
-1. HACS → ⋮ → **Custom repositories** → add `https://github.com/ak111pro/ha-metronome`,
-   category **Integration**.
-2. Download **Metronome** in HACS and restart Home Assistant.
-3. **Settings → Devices & services → Add integration → Metronome.** Give the instance a name;
+1. In HACS, search for **Metronome** and download it, then restart Home Assistant.
+
+   If it does not show up (older HACS data), add it as a custom repository instead: HACS → ⋮ →
+   **Custom repositories** → `https://github.com/ak111pro/ha-metronome`, category
+   **Integration**, then download **Metronome** and restart.
+2. **Settings → Devices & services → Add integration → Metronome.** Give the instance a name;
    several instances are supported.
-4. The card's JavaScript is registered as a dashboard resource **automatically**
+3. The card's JavaScript is registered as a dashboard resource **automatically**
    (`/metronome/metronome-card.js?v=<version>`, updated on every start, never duplicated).
    Reload the dashboard page (or the app) once.
-5. Add a **Metronome** card with the card picker, or:
+4. Add a **Metronome** card with the card picker, or:
 
    ```yaml
    type: custom:metronome-card
@@ -66,7 +68,7 @@ report issues on GitHub.
    ```
 
    Use the media player your instance created.
-6. On the phone or browser that should play, tap **Start** (or Play on a Tile, see below) and
+5. On the phone or browser that should play, tap **Start** (or Play on a Tile, see below) and
    keep the app in the foreground.
 
 **Dashboard resources in YAML mode** (`lovelace: resource_mode: yaml`): the integration cannot
